@@ -217,6 +217,7 @@ body {
   border-color: rgba(0,240,255,0.15);
   box-shadow: 0 4px 20px rgba(0,240,255,0.06);
 }
+.game-card { cursor: pointer; }
 .game-card-tag {
   display: inline-block;
   padding: 2px 10px;
@@ -520,7 +521,7 @@ window.addEventListener('touchmove', e => {
   mouse.x = t.clientX; mouse.y = t.clientY;
 }, { passive: true });
 
-// Card glow tracking
+// Card glow tracking + full card click
 document.querySelectorAll('.game-card').forEach(card => {
   card.addEventListener('mousemove', e => {
     const r = card.getBoundingClientRect();
@@ -528,6 +529,12 @@ document.querySelectorAll('.game-card').forEach(card => {
     if (g) {
       g.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
       g.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+    }
+  });
+  card.addEventListener('click', e => {
+    const link = card.querySelector('.game-card-link');
+    if (link && !e.target.closest('.game-card-link')) {
+      link.click();
     }
   });
 });
