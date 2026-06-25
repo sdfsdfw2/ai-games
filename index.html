@@ -7,17 +7,85 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: linear-gradient(135deg, #060a12 0%, #0d1520 50%, #060a12 100%);
+  background: #060a12;
   color: #e5e7eb;
   font-family: "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+#bg-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.scanlines {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+.vignette {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(6,10,18,0.8) 100%);
+}
+.container {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 40px 20px;
 }
-.container { max-width: 1200px; margin: 0 auto; }
 .header {
   text-align: center;
-  padding: 40px 0 50px;
+  padding: 60px 0 50px;
   position: relative;
+}
+.brain-icon {
+  font-size: 64px;
+  display: block;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 30px rgba(16,185,129,0.4));
+  animation: brainPulse 3s ease-in-out infinite;
+}
+@keyframes brainPulse {
+  0%, 100% { filter: drop-shadow(0 0 30px rgba(16,185,129,0.4)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 60px rgba(16,185,129,0.7)); transform: scale(1.05); }
+}
+.header h1 {
+  font-size: 48px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 40%, #f59e0b 70%, #10b981 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 6px;
+  animation: gradientShift 4s ease infinite;
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.header p {
+  margin-top: 16px;
+  font-size: 16px;
+  color: #9ca3af;
+  letter-spacing: 3px;
 }
 .header::after {
   content: '';
@@ -25,70 +93,111 @@ body {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 200px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #10b981, transparent);
+  width: 300px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #10b981, #06b6d4, #10b981, transparent);
 }
-.header h1 {
-  font-size: 42px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #10b981, #06b6d4, #f59e0b);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 4px;
+.glow-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: #10b981;
+  border-radius: 2px;
+  filter: blur(6px);
+  opacity: 0.6;
 }
-.header p {
+.count-badge {
+  display: inline-block;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 20px;
+  padding: 6px 20px;
+  font-size: 13px;
+  color: #10b981;
   margin-top: 16px;
-  font-size: 16px;
-  color: #9ca3af;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 .games-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
-  padding: 20px 0;
+  padding: 30px 0;
 }
 .game-card {
-  background: rgba(17, 24, 39, 0.9);
-  border: 1px solid #1e293b;
+  background: rgba(17,24,39,0.75);
+  border: 1px solid rgba(30,41,59,0.6);
   border-radius: 16px;
   padding: 28px 24px;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
 }
 .game-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #10b981, #06b6d4);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10b981, #06b6d4, transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+.game-card:hover::before {
+  transform: translateX(100%);
+}
+.game-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(16,185,129,0), rgba(16,185,129,0), rgba(6,182,212,0));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: all 0.4s ease;
+  opacity: 0;
+}
+.game-card:hover::after {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(16,185,129,0.5), rgba(16,185,129,0.1), rgba(6,182,212,0.5));
 }
 .game-card:hover {
-  border-color: #10b981;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.15);
+  border-color: rgba(16,185,129,0.3);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 60px rgba(16,185,129,0.12), 0 0 40px rgba(16,185,129,0.05);
 }
-.game-card:hover::before { transform: scaleX(1); }
+.game-card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(16,185,129,0.04), transparent 60%);
+  pointer-events: none;
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+.game-card:hover .game-card-glow { opacity: 1; }
 .game-icon {
   font-size: 36px;
   margin-bottom: 12px;
   display: block;
+  transition: transform 0.3s;
 }
+.game-card:hover .game-icon { transform: scale(1.1); }
 .game-title {
   font-size: 20px;
   font-weight: 700;
   color: #10b981;
   margin-bottom: 10px;
+  transition: color 0.3s;
 }
+.game-card:hover .game-title { color: #34d399; }
 .game-desc {
   font-size: 13px;
   color: #9ca3af;
@@ -101,49 +210,59 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 20px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
+  background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1));
+  color: #10b981;
   text-decoration: none;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  transition: all 0.2s;
+  border: 1px solid rgba(16,185,129,0.25);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
 }
+.game-link::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(16,185,129,0.2), transparent);
+  transition: left 0.5s;
+}
+.game-link:hover::before { left: 100%; }
 .game-link:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border-color: #10b981;
+  box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+  transform: translateY(-1px);
 }
 .game-tag {
   display: inline-block;
   padding: 2px 10px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.2);
   border-radius: 20px;
   font-size: 11px;
-  color: #10b981;
+  color: #6ee7b7;
   margin-bottom: 12px;
+  letter-spacing: 0.5px;
 }
 .footer {
   text-align: center;
   padding: 40px 0 20px;
-  color: #4b5563;
+  color: rgba(75,85,99,0.6);
   font-size: 12px;
-  border-top: 1px solid #1e293b;
+  border-top: 1px solid rgba(30,41,59,0.4);
   margin-top: 40px;
-}
-.count-badge {
-  display: inline-block;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  border-radius: 20px;
-  padding: 4px 16px;
-  font-size: 14px;
-  color: #10b981;
-  margin-top: 12px;
+  letter-spacing: 1px;
 }
 @media (max-width: 720px) {
-  body { padding: 20px 12px; }
-  .header h1 { font-size: 28px; }
+  body { padding: 0; }
+  .container { padding: 20px 12px; }
+  .header { padding: 40px 0 30px; }
+  .header h1 { font-size: 28px; letter-spacing: 3px; }
+  .brain-icon { font-size: 44px; }
   .games-grid { grid-template-columns: 1fr; gap: 16px; }
   .game-card { padding: 20px 16px; }
   .game-desc { min-height: auto; }
@@ -151,71 +270,78 @@ body {
 </style>
 </head>
 <body>
+<canvas id="bg-canvas"></canvas>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
 <div class="container">
   <div class="header">
+    <span class="brain-icon">🧠</span>
     <h1>AI 游戏乐园</h1>
     <p>人工智能驱动的交互式模拟与游戏体验</p>
-    <div class="count-badge">共 8 款 AI 游戏</div>
+    <div class="count-badge">✦ 共 8 款 AI 游戏 ✦</div>
+    <div class="glow-bar"></div>
   </div>
 
   <div class="games-grid">
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">🐍</span>
       <span class="game-tag">寻路算法</span>
       <div class="game-title">AI 贪吃蛇</div>
       <div class="game-desc">基于 BFS 寻路、控尾防御和终局 MATRIX 折叠算法的智能贪吃蛇，在 20×20 棋盘上冲击 400 分满分，支持五种速度切换。</div>
       <a class="game-link" href="AI贪吃蛇.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">✈️</span>
       <span class="game-tag">强化学习</span>
       <div class="game-title">AI 躲避子弹</div>
       <div class="game-desc">AI 通过 729 种状态空间的强化学习学会预判子弹轨迹并灵活躲避，支持预训练模型、子弹密度和速度调节，手机与电脑端均适配。</div>
       <a class="game-link" href="AI躲避子弹.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">🧠</span>
       <span class="game-tag">Q-Learning</span>
       <div class="game-title">AI 挡球</div>
       <div class="game-desc">两个 Q-learning AI 在 330 种状态空间中学习预判球轨迹并拦截，AI 速度高于球速确保物理可行性，支持预训练和存档功能。</div>
       <a class="game-link" href="AI挡球.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">⚔</span>
       <span class="game-tag">文明模拟</span>
       <div class="game-title">部落文明</div>
       <div class="game-desc">模拟部落文明的进化生态，生物通过神经网络自主决策，采集资源、繁衍后代、结盟或发动战争，支持实时调节环境参数和观察部落兴衰。</div>
       <a class="game-link" href="部落文明.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">🌍</span>
       <span class="game-tag">生态进化</span>
       <div class="game-title">数字文明 · 进化生态模拟</div>
       <div class="game-desc">数字文明进化生态模拟，生物通过神经网络进化，有植食 / 肉食 / 杂食之分，形成复杂食物链和城市聚落，支持昼夜循环和环境调节。</div>
       <a class="game-link" href="数字文明进化生态模拟.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">🧬</span>
       <span class="game-tag">遗传算法</span>
       <div class="game-title">神经网络进化模拟器</div>
       <div class="game-desc">生物在二维世界中通过神经网络进化，学会寻找食物、避开毒药和障碍物，支持世代遗传、蜂群行为和点击交互操控。</div>
       <a class="game-link" href="神经网络进化模拟器.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">⚛</span>
       <span class="game-tag">化学模拟</span>
       <div class="game-title">真实化学进化模拟器</div>
       <div class="game-desc">基于真实元素周期表的化学进化模拟，原子自发成键形成分子，逐步从无机物进化到有机物、生物分子乃至原细胞的涌现。</div>
       <a class="game-link" href="化学进化模拟器.html">进入游戏 →</a>
     </div>
-
     <div class="game-card">
+      <div class="game-card-glow"></div>
       <span class="game-icon">🔮</span>
       <span class="game-tag">物理模拟</span>
       <div class="game-title">轨道弹球</div>
@@ -228,5 +354,231 @@ body {
     AI 游戏乐园 · 人工智能驱动的交互式模拟合集
   </div>
 </div>
+
+<script>
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const brainNeurons = [];
+const NUM_NEURONS = 180;
+const NUM_FLOATING = 120;
+const NUM_AXONS = 280;
+
+function isInBrain(x, y) {
+  const cx = W / 2, cy = H * 0.48;
+  const dx = x - cx, dy = y - cy;
+  const leftHemi = dx < 0;
+  const hw = W * 0.24, hh = H * 0.22;
+  const nx = leftHemi ? dx + hw * 0.15 : dx - hw * 0.15;
+  const ny = dy;
+  const inHemi = (nx * nx) / (hw * hw) + (ny * ny) / (hh * hh) < 1;
+  const stemX = W / 2, stemY = cy + hh * 0.5;
+  const inStem = Math.abs(x - stemX) < W * 0.035 && y > stemY && y < stemY + H * 0.1;
+  const inBridge = Math.abs(dx) < W * 0.06 && Math.abs(dy) < hh * 0.4;
+  return inHemi || inStem || inBridge;
+}
+
+function randomBrainPoint() {
+  for (let i = 0; i < 500; i++) {
+    const x = W / 2 + (Math.random() - 0.5) * W * 0.7;
+    const y = H * 0.48 + (Math.random() - 0.5) * H * 0.6;
+    if (isInBrain(x, y)) return { x, y };
+  }
+  return { x: W / 2 + (Math.random() - 0.5) * W * 0.2, y: H * 0.48 + (Math.random() - 0.5) * H * 0.2 };
+}
+
+for (let i = 0; i < NUM_NEURONS; i++) {
+  const p = randomBrainPoint();
+  brainNeurons.push({
+    x: p.x, y: p.y,
+    vx: (Math.random() - 0.5) * 0.15,
+    vy: (Math.random() - 0.5) * 0.15,
+    rad: 1.5 + Math.random() * 2.5,
+    phase: Math.random() * Math.PI * 2,
+    freq: 0.3 + Math.random() * 0.7,
+    activity: Math.random(),
+    hue: 140 + Math.random() * 40,
+    group: Math.floor(Math.random() * 4)
+  });
+}
+
+const axons = [];
+for (let i = 0; i < NUM_AXONS; i++) {
+  const a = Math.floor(Math.random() * brainNeurons.length);
+  let b = Math.floor(Math.random() * brainNeurons.length);
+  while (b === a) b = Math.floor(Math.random() * brainNeurons.length);
+  const n1 = brainNeurons[a], n2 = brainNeurons[b];
+  const dist = Math.hypot(n1.x - n2.x, n1.y - n2.y);
+  if (dist < Math.min(W, H) * 0.25 && n1.group !== n2.group) {
+    axons.push({ a, b, life: Math.random(), speed: 0.2 + Math.random() * 0.4, pulse: Math.random() });
+  }
+}
+
+const floating = [];
+for (let i = 0; i < NUM_FLOATING; i++) {
+  floating.push({
+    x: Math.random() * W, y: Math.random() * H,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3 - 0.1,
+    rad: 0.5 + Math.random() * 1.5,
+    alpha: 0.1 + Math.random() * 0.3
+  });
+}
+
+let mouseX = W / 2, mouseY = H / 2;
+window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+window.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  if (t) { mouseX = t.clientX; mouseY = t.clientY; }
+}, { passive: true });
+
+document.querySelectorAll('.game-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    const glow = card.querySelector('.game-card-glow');
+    if (glow) {
+      glow.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%');
+      glow.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%');
+    }
+  });
+});
+
+let time = 0;
+function draw() {
+  time += 0.016;
+  ctx.clearRect(0, 0, W, H);
+
+  const grad = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 0.5);
+  grad.addColorStop(0, 'rgba(6,10,18,1)');
+  grad.addColorStop(0.5, 'rgba(6,10,18,1)');
+  grad.addColorStop(1, 'rgba(6,10,18,1)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const mpDist = Math.hypot(mouseX - W / 2, mouseY - H / 2);
+  const mouseInfluence = Math.max(0, 1 - mpDist / (W * 0.4));
+
+  for (const p of floating) {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W;
+    if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H;
+    if (p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(16,185,129,${p.alpha * 0.4})`;
+    ctx.fill();
+  }
+
+  for (const n of brainNeurons) {
+    n.x += n.vx + (mouseX - W / 2) * 0.00005 * mouseInfluence;
+    n.y += n.vy + (mouseY - H * 0.48) * 0.00005 * mouseInfluence;
+    n.vx *= 0.98; n.vy *= 0.98;
+    if (!isInBrain(n.x, n.y)) {
+      n.vx += (W / 2 - n.x) * 0.001;
+      n.vy += (H * 0.48 - n.y) * 0.001;
+    }
+    const act = 0.5 + 0.5 * Math.sin(time * n.freq + n.phase);
+    n.activity = act;
+  }
+
+  for (const ax of axons) {
+    const n1 = brainNeurons[ax.a];
+    const n2 = brainNeurons[ax.b];
+    if (!n1 || !n2) continue;
+    const dx = n2.x - n1.x, dy = n2.y - n1.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > Math.min(W, H) * 0.3) continue;
+
+    const act = (n1.activity + n2.activity) * 0.5;
+    const alpha = act * 0.15;
+    if (alpha < 0.02) continue;
+
+    ctx.beginPath();
+    ctx.moveTo(n1.x, n1.y);
+    const cpx = (n1.x + n2.x) / 2 + (Math.random() - 0.5) * 10;
+    const cpy = (n1.y + n2.y) / 2 + (Math.random() - 0.5) * 10;
+    ctx.quadraticCurveTo(cpx, cpy, n2.x, n2.y);
+    ctx.strokeStyle = `rgba(16,185,129,${alpha})`;
+    ctx.lineWidth = 0.5 + act * 1;
+    ctx.stroke();
+
+    ax.pulse += ax.speed * 0.016;
+    if (ax.pulse > 1) ax.pulse = 0;
+    const pulseX = n1.x + dx * ax.pulse;
+    const pulseY = n1.y + dy * ax.pulse;
+    ctx.beginPath();
+    ctx.arc(pulseX, pulseY, 1.5 + act * 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(110,231,183,${act * 0.6})`;
+    ctx.fill();
+  }
+
+  for (let i = 0; i < brainNeurons.length; i++) {
+    for (let j = i + 1; j < brainNeurons.length; j++) {
+      const dx = brainNeurons[i].x - brainNeurons[j].x;
+      const dy = brainNeurons[i].y - brainNeurons[j].y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 40 && brainNeurons[i].group === brainNeurons[j].group) {
+        const act = (brainNeurons[i].activity + brainNeurons[j].activity) * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(brainNeurons[i].x, brainNeurons[i].y);
+        ctx.lineTo(brainNeurons[j].x, brainNeurons[j].y);
+        ctx.strokeStyle = `rgba(16,185,129,${act * 0.08})`;
+        ctx.lineWidth = 0.3;
+        ctx.stroke();
+      }
+    }
+  }
+
+  for (const n of brainNeurons) {
+    const r = n.rad * (0.8 + n.activity * 0.4);
+    const glowSize = r * 6;
+    const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowSize);
+    grd.addColorStop(0, `rgba(16,185,129,${n.activity * 0.25})`);
+    grd.addColorStop(1, 'rgba(16,185,129,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, glowSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(16,185,129,${0.3 + n.activity * 0.5})`;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(209,250,229,${0.2 + n.activity * 0.5})`;
+    ctx.fill();
+  }
+
+  const cx = W / 2, cy = H * 0.48;
+  const hw = W * 0.24, hh = H * 0.22;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(16,185,129,0.04)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 8]);
+  ctx.strokeStyle = 'rgba(16,185,129,0.03)';
+  ctx.beginPath();
+  ctx.ellipse(cx - hw * 0.15, cy, hw, hh, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx + hw * 0.15, cy, hw, hh, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
 </body>
 </html>
