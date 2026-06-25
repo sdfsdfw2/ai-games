@@ -14,17 +14,16 @@
   --violet: #8b5cf6;
   --gold: #f59e0b;
   --bg: #02040a;
-  --panel: rgba(8,12,24,0.85);
 }
 html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:#e5e7eb; font-family:'Noto Sans SC',system-ui,sans-serif; }
 #app { display:flex; width:100vw; height:100vh; position:relative; }
 
-/* ===== LEFT: BRAIN CANVAS ===== */
+/* ===== LEFT: BRAIN ===== */
 #brain-panel {
   flex:0 0 50%;
   position:relative;
   overflow:hidden;
-  border-right:1px solid rgba(0,240,255,0.08);
+  border-right:1px solid rgba(0,240,255,0.06);
 }
 #brain-canvas {
   position:absolute;
@@ -34,309 +33,263 @@ html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); colo
 .brain-overlay {
   position:absolute;
   top:0; left:0; width:100%; height:100%;
-  background:linear-gradient(180deg, rgba(2,4,10,0) 0%, rgba(2,4,10,0.6) 100%);
-  pointer-events:none;
-  z-index:2;
+  background:linear-gradient(180deg, rgba(2,4,10,0.8) 0%, rgba(2,4,10,0.3) 30%, rgba(2,4,10,0.3) 70%, rgba(2,4,10,0.8) 100%);
+  pointer-events:none; z-index:2;
 }
-.brain-title {
+.brain-header {
   position:absolute;
-  bottom:60px;
-  left:50%;
-  transform:translateX(-50%);
+  top:32px; left:0; right:0;
   z-index:3;
   text-align:center;
 }
-.brain-title h1 {
+.brain-header h1 {
   font-family:'Orbitron',sans-serif;
-  font-size:52px;
+  font-size:44px;
   font-weight:900;
-  letter-spacing:8px;
+  letter-spacing:6px;
   background:linear-gradient(135deg, var(--cyan) 0%, var(--emerald) 40%, var(--gold) 70%, var(--cyan) 100%);
   background-size:300% 300%;
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
   background-clip:text;
-  animation:gradientDrift 4s ease infinite;
-  text-shadow:none;
-  filter:drop-shadow(0 0 40px rgba(0,240,255,0.15));
+  animation:gDrift 4s ease infinite;
+  filter:drop-shadow(0 0 50px rgba(0,240,255,0.1));
 }
-.brain-title h1::after {
-  content:'AI GAME HUB';
+.brain-header h1::after {
+  content:'AI 游戏乐园';
   position:absolute;
-  top:0;left:0;
+  top:0;left:0;right:0;
   font-family:'Orbitron',sans-serif;
-  font-size:52px;
-  font-weight:900;
-  letter-spacing:8px;
+  font-size:44px;font-weight:900;letter-spacing:6px;
   background:linear-gradient(135deg, var(--cyan), var(--emerald), var(--gold), var(--cyan));
+  background-size:300% 300%;
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
   background-clip:text;
-  filter:blur(12px) brightness(1.5);
-  opacity:0.4;
+  filter:blur(16px) brightness(1.8);
+  opacity:0.3;
   z-index:-1;
-  animation:gradientDrift 4s ease infinite;
+  animation:gDrift 4s ease infinite;
 }
-.brain-title p {
-  font-size:14px;
-  color:rgba(0,240,255,0.5);
-  letter-spacing:6px;
-  margin-top:8px;
+.brain-header p {
+  font-size:11px;
+  color:rgba(0,240,255,0.3);
+  letter-spacing:8px;
+  margin-top:6px;
   font-family:'Orbitron',sans-serif;
   text-transform:uppercase;
-  text-shadow:0 0 20px rgba(0,240,255,0.2);
 }
-.brain-corner {
-  position:absolute;
-  z-index:3;
-  pointer-events:none;
-}
-.brain-corner-tl { top:24px; left:24px; width:40px; height:40px; border-top:1px solid rgba(0,240,255,0.15); border-left:1px solid rgba(0,240,255,0.15); }
-.brain-corner-tr { top:24px; right:24px; width:40px; height:40px; border-top:1px solid rgba(0,240,255,0.15); border-right:1px solid rgba(0,240,255,0.15); }
-.brain-corner-bl { bottom:24px; left:24px; width:40px; height:40px; border-bottom:1px solid rgba(0,240,255,0.15); border-left:1px solid rgba(0,240,255,0.15); }
-.brain-corner-br { bottom:24px; right:24px; width:40px; height:40px; border-bottom:1px solid rgba(0,240,255,0.15); border-right:1px solid rgba(0,240,255,0.15); }
 
-@keyframes gradientDrift {
+@keyframes gDrift {
   0% { background-position:0% 50%; }
   50% { background-position:100% 50%; }
   100% { background-position:0% 50%; }
 }
 
-/* ===== RIGHT: GAME PANEL ===== */
+/* ===== RIGHT: GAMES ===== */
 #game-panel {
   flex:0 0 50%;
   position:relative;
   overflow-y:auto;
   overflow-x:hidden;
-  padding:40px 36px;
-  background:radial-gradient(ellipse at 0% 50%, rgba(0,240,255,0.02) 0%, transparent 60%);
+  padding:36px 32px;
+  background:radial-gradient(ellipse at 0% 50%, rgba(0,240,255,0.015) 0%, transparent 60%);
 }
 #game-panel::-webkit-scrollbar { width:3px; }
 #game-panel::-webkit-scrollbar-track { background:transparent; }
-#game-panel::-webkit-scrollbar-thumb { background:rgba(0,240,255,0.2); border-radius:2px; }
+#game-panel::-webkit-scrollbar-thumb { background:rgba(0,240,255,0.15); border-radius:2px; }
 
 .panel-header {
-  margin-bottom:32px;
-  position:relative;
+  margin-bottom:28px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(0,240,255,0.04);
+  padding-bottom:12px;
 }
 .panel-header h2 {
   font-family:'Orbitron',sans-serif;
-  font-size:14px;
-  letter-spacing:4px;
-  color:rgba(0,240,255,0.4);
+  font-size:12px;
+  letter-spacing:3px;
+  color:rgba(0,240,255,0.35);
   text-transform:uppercase;
 }
 .panel-header .count {
-  font-size:12px;
+  font-size:11px;
   color:rgba(0,240,255,0.2);
   font-family:'Orbitron',sans-serif;
-  letter-spacing:2px;
-  margin-top:4px;
+  letter-spacing:1px;
 }
 
 .games-list {
   display:flex;
   flex-direction:column;
-  gap:16px;
+  gap:12px;
   padding-bottom:40px;
 }
 .game-row {
   display:flex;
   align-items:center;
-  gap:16px;
-  padding:16px 20px;
-  background:rgba(8,12,24,0.6);
-  border:1px solid rgba(0,240,255,0.06);
-  border-radius:12px;
+  gap:14px;
+  padding:14px 18px;
+  background:rgba(8,12,24,0.5);
+  border:1px solid rgba(0,240,255,0.04);
+  border-radius:10px;
   cursor:pointer;
-  transition:all 0.35s cubic-bezier(0.4,0,0.2,1);
+  transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
   position:relative;
   overflow:hidden;
-  backdrop-filter:blur(10px);
+  backdrop-filter:blur(8px);
 }
 .game-row::before {
   content:'';
   position:absolute;
   top:0; left:0; width:100%; height:100%;
-  background:linear-gradient(135deg, rgba(0,240,255,0.03), transparent);
+  background:linear-gradient(135deg, rgba(0,240,255,0.02), transparent);
   opacity:0;
-  transition:opacity 0.35s;
+  transition:opacity 0.4s;
 }
 .game-row::after {
   content:'';
   position:absolute;
-  left:0; top:0; bottom:0;
+  left:0; top:4px; bottom:4px;
   width:2px;
   background:linear-gradient(180deg, transparent, var(--cyan), transparent);
   transform:scaleY(0);
-  transition:transform 0.35s ease;
+  transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
+  border-radius:1px;
 }
 .game-row:hover {
-  border-color:rgba(0,240,255,0.15);
-  transform:translateX(4px);
-  background:rgba(8,12,24,0.8);
-  box-shadow:0 0 30px rgba(0,240,255,0.03), 0 0 60px rgba(0,240,255,0.02);
+  border-color:rgba(0,240,255,0.12);
+  transform:translateX(6px);
+  background:rgba(8,12,24,0.7);
+  box-shadow:0 0 30px rgba(0,240,255,0.02);
 }
 .game-row:hover::before { opacity:1; }
 .game-row:hover::after { transform:scaleY(1); }
 
 .game-row-icon {
-  flex:0 0 44px;
-  width:44px; height:44px;
+  flex:0 0 40px;
+  width:40px; height:40px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:22px;
-  background:rgba(0,240,255,0.03);
-  border:1px solid rgba(0,240,255,0.06);
-  border-radius:10px;
-  transition:all 0.35s;
+  font-size:20px;
+  background:rgba(0,240,255,0.02);
+  border:1px solid rgba(0,240,255,0.05);
+  border-radius:8px;
+  transition:all 0.4s;
 }
 .game-row:hover .game-row-icon {
-  background:rgba(0,240,255,0.06);
-  border-color:rgba(0,240,255,0.12);
+  background:rgba(0,240,255,0.05);
+  border-color:rgba(0,240,255,0.1);
   transform:scale(1.05);
-  box-shadow:0 0 20px rgba(0,240,255,0.05);
+  box-shadow:0 0 20px rgba(0,240,255,0.04);
 }
+
 .game-row-body { flex:1; min-width:0; }
 .game-row-title {
-  font-size:15px;
+  font-size:14px;
   font-weight:700;
-  color:#e5e7eb;
-  margin-bottom:3px;
+  color:#d1d5db;
+  margin-bottom:2px;
   transition:color 0.3s;
 }
 .game-row:hover .game-row-title { color:var(--cyan); }
+
 .game-row-desc {
-  font-size:12px;
-  color:rgba(156,163,175,0.6);
+  font-size:11px;
+  color:rgba(156,163,175,0.4);
   line-height:1.5;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
+.game-row:hover .game-row-desc { color:rgba(156,163,175,0.6); }
+
 .game-row-tag {
   flex:0 0 auto;
-  padding:2px 10px;
-  background:rgba(0,240,255,0.04);
-  border:1px solid rgba(0,240,255,0.08);
+  padding:2px 8px;
+  background:rgba(0,240,255,0.03);
+  border:1px solid rgba(0,240,255,0.06);
   border-radius:20px;
-  font-size:10px;
-  color:rgba(0,240,255,0.4);
+  font-size:9px;
+  color:rgba(0,240,255,0.3);
   font-family:'Orbitron',sans-serif;
   letter-spacing:1px;
-  transition:all 0.35s;
+  transition:all 0.4s;
 }
 .game-row:hover .game-row-tag {
-  background:rgba(0,240,255,0.08);
-  border-color:rgba(0,240,255,0.15);
-  color:rgba(0,240,255,0.6);
+  background:rgba(0,240,255,0.06);
+  border-color:rgba(0,240,255,0.12);
+  color:rgba(0,240,255,0.5);
 }
+
 .game-row-arrow {
-  flex:0 0 20px;
-  color:rgba(0,240,255,0.15);
-  font-size:14px;
-  transition:all 0.35s;
+  flex:0 0 16px;
+  color:rgba(0,240,255,0.1);
+  font-size:12px;
+  transition:all 0.4s;
 }
 .game-row:hover .game-row-arrow {
   color:var(--cyan);
   transform:translateX(4px);
 }
+
 .game-row a {
   position:absolute;
-  inset:0;
-  z-index:1;
+  inset:0; z-index:1;
 }
 
-.tech-line {
-  position:absolute;
-  pointer-events:none;
-  z-index:1;
-}
-.tech-line-h {
-  left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(0,240,255,0.03), transparent);
-}
-
-/* ===== ANIMATED DATA STREAM OVERLAY ===== */
-.data-stream {
-  position:fixed;
-  top:0; left:0; width:100%; height:100%;
-  pointer-events:none;
-  z-index:0;
-  opacity:0.03;
-  overflow:hidden;
-}
-.data-stream span {
-  display:block;
-  font-family:'Orbitron',monospace;
-  font-size:8px;
-  color:var(--cyan);
-  writing-mode:vertical-lr;
-  position:absolute;
-  animation:streamFall linear infinite;
-  animation-duration:calc(8s + (var(--d) * 4s));
-  animation-delay:calc(var(--d) * -2s);
-  left:calc(var(--x) * 1%);
-  opacity:0.3;
-}
-@keyframes streamFall {
-  0% { transform:translateY(-100%); opacity:0; }
-  10% { opacity:0.3; }
-  90% { opacity:0.3; }
-  100% { transform:translateY(100vh); opacity:0; }
+.divider {
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(0,240,255,0.08), transparent);
+  margin:0 0 6px 0;
+  opacity:0.5;
 }
 
 @media (max-width:960px) {
   #app { flex-direction:column; }
-  #brain-panel { flex:0 0 40vh; border-right:none; border-bottom:1px solid rgba(0,240,255,0.08); }
-  .brain-title h1 { font-size:32px; }
-  .brain-title h1::after { font-size:32px; }
-  .brain-title { bottom:24px; }
-  #game-panel { flex:1; padding:20px 16px; }
-  .game-row { padding:12px 14px; }
-  .game-row-desc { white-space:normal; }
+  #brain-panel { flex:0 0 38vh; border-right:none; border-bottom:1px solid rgba(0,240,255,0.06); }
+  .brain-header h1 { font-size:28px; }
+  .brain-header h1::after { font-size:28px; }
+  .brain-header { top:20px; }
+  #game-panel { flex:1; padding:16px; }
+  .game-row { padding:10px 12px; gap:10px; }
+  .game-row-desc { white-space:normal; font-size:10px; }
 }
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- LEFT: BRAIN -->
   <div id="brain-panel">
     <canvas id="brain-canvas"></canvas>
     <div class="brain-overlay"></div>
-    <div class="brain-corner brain-corner-tl"></div>
-    <div class="brain-corner brain-corner-tr"></div>
-    <div class="brain-corner brain-corner-bl"></div>
-    <div class="brain-corner brain-corner-br"></div>
-    <div class="brain-title">
+    <div class="brain-header">
       <h1>AI 游戏乐园</h1>
       <p>Playground of Intelligence</p>
     </div>
   </div>
-
-  <!-- RIGHT: GAMES -->
   <div id="game-panel">
     <div class="panel-header">
       <h2>✦ Game Archive</h2>
-      <div class="count">ACTIVE ENTITIES: 08</div>
+      <div class="count">ACTIVE: 08</div>
     </div>
     <div class="games-list"></div>
   </div>
 </div>
 
-<div class="data-stream" id="dataStream"></div>
-
 <script>
+// ===== GAME DATA =====
 const games = [
-  { icon:'🐍', title:'AI 贪吃蛇', tag:'PATHFIND', desc:'BFS 寻路 · 控尾防御 · MATRIX 折叠算法 — 20×20 棋盘冲击 400 分满分', href:'AI贪吃蛇.html' },
-  { icon:'✈️', title:'AI 躲避子弹', tag:'REINFORCE', desc:'729 状态空间强化学习 · 预判弹道 · 自适应密度与速度调节', href:'AI躲避子弹.html' },
-  { icon:'🧠', title:'AI 挡球', tag:'Q-LEARN', desc:'双 Q-learning AI 对抗 · 330 状态空间 · 预训练模型 + 存档', href:'AI挡球.html' },
-  { icon:'⚔', title:'部落文明', tag:'SIMULATE', desc:'神经网络自主决策 · 采集 / 战争 / 繁衍 · 实时环境调节', href:'部落文明.html' },
-  { icon:'🌍', title:'数字文明 · 进化生态模拟', tag:'ECOSYS', desc:'食物链 + 城市聚落 + 昼夜循环 · 植食 / 肉食 / 杂食进化', href:'数字文明进化生态模拟.html' },
-  { icon:'🧬', title:'神经网络进化模拟器', tag:'GENETIC', desc:'遗传算法 + 蜂群行为 · 二维世界觅食与避毒进化', href:'神经网络进化模拟器.html' },
-  { icon:'⚛', title:'真实化学进化模拟器', tag:'CHEMESIS', desc:'真实元素周期表 · 原子成键 → 分子 → 有机物 → 原细胞涌现', href:'化学进化模拟器.html' },
-  { icon:'🔮', title:'轨道弹球', tag:'PHYSICS', desc:'二维圆周曲面碰撞物理 · AI 预测落点 · 1x~15x 时空流速', href:'轨道弹球.html' }
+  { icon:'🐍', title:'AI 贪吃蛇', tag:'PATHFIND', desc:'BFS 寻路 · 控尾防御 · MATRIX 折叠 — 20×20 棋盘 400 分', href:'AI贪吃蛇.html' },
+  { icon:'✈️', title:'AI 躲避子弹', tag:'REINFORCE', desc:'729 状态强化学习 · 预判弹道 · 密度 / 速度自适应', href:'AI躲避子弹.html' },
+  { icon:'🧠', title:'AI 挡球', tag:'Q-LEARN', desc:'双 Q-learning 对抗 · 330 状态空间 · 预训练 + 存档', href:'AI挡球.html' },
+  { icon:'⚔', title:'部落文明', tag:'SIMULATE', desc:'神经网络决策 · 采集 / 战争 / 繁衍 · 环境实时调节', href:'部落文明.html' },
+  { icon:'🌍', title:'数字文明 · 进化生态模拟', tag:'ECOSYS', desc:'食物链 + 聚落 + 昼夜 · 植食 / 肉食 / 杂食进化', href:'数字文明进化生态模拟.html' },
+  { icon:'🧬', title:'神经网络进化模拟器', tag:'GENETIC', desc:'遗传算法 + 蜂群 · 二维觅食避毒进化', href:'神经网络进化模拟器.html' },
+  { icon:'⚛', title:'真实化学进化模拟器', tag:'CHEMESIS', desc:'元素周期表 · 原子成键 → 分子 → 有机物 → 细胞', href:'化学进化模拟器.html' },
+  { icon:'🔮', title:'轨道弹球', tag:'PHYSICS', desc:'曲面碰撞物理 · AI 落点预测 · 1x~15x 时空流速', href:'轨道弹球.html' }
 ];
 
 const list = document.querySelector('.games-list');
@@ -356,204 +309,331 @@ games.forEach(g => {
   list.appendChild(row);
 });
 
-// Data stream
-const stream = document.getElementById('dataStream');
-const chars = '0101011010010100110100101001101101011010010110100110100101';
-for (let i = 0; i < 30; i++) {
-  const s = document.createElement('span');
-  s.textContent = chars.slice(0, 8 + Math.floor(Math.random() * 16));
-  s.style.setProperty('--x', Math.random() * 100);
-  s.style.setProperty('--d', Math.random());
-  s.style.animationDuration = (6 + Math.random() * 8) + 's';
-  stream.appendChild(s);
-}
-
 // ===== BRAIN CANVAS =====
-const canvas = document.getElementById('brain-canvas');
-const ctx = canvas.getContext('2d');
-let W, H;
+const cvs = document.getElementById('brain-canvas');
+const ctx = cvs.getContext('2d');
+let W, H, CX, CY;
 
 function resize() {
-  const rect = canvas.parentElement.getBoundingClientRect();
-  W = canvas.width = rect.width;
-  H = canvas.height = rect.height;
+  const r = cvs.parentElement.getBoundingClientRect();
+  W = cvs.width = r.width;
+  H = cvs.height = r.height;
+  CX = W / 2;
+  CY = H / 2;
 }
-window.addEventListener('resize', resize);
 resize();
+window.addEventListener('resize', () => { resize(); rebuildBrain(); });
 
-// Glowing orb
+// ---- Brain Shape Definition ----
+// Build a realistic brain silhouette path.
+// Returns { path, testPoint(x,y) } — testPoint uses isPointInPath on the cached path.
+
+let brainPath = null;
+const SCALE_FACTOR = 0.42; // brain size relative to min(W,H)
+
+function buildBrainPath(cx, cy, sc) {
+  const p = new Path2D();
+  const w = Math.min(W, H) * sc;
+  const h = w * 0.75;
+
+  // Left hemisphere (outer boundary from top-center, going clockwise)
+  const lx = cx - w * 0.08;
+  const rx = cx + w * 0.08;
+
+  // Start at top of longitudinal fissure
+  p.moveTo(cx, cy - h * 0.88);
+
+  // --- Left hemisphere ---
+  // Top-left frontal curve
+  p.bezierCurveTo(
+    cx - w * 0.12, cy - h * 0.92,
+    cx - w * 0.48, cy - h * 0.85,
+    cx - w * 0.50, cy - h * 0.55
+  );
+  // Frontal pole down to temporal
+  p.bezierCurveTo(
+    cx - w * 0.52, cy - h * 0.35,
+    cx - w * 0.48, cy - h * 0.15,
+    cx - w * 0.42, cy - h * 0.05
+  );
+  // Temporal lobe outward
+  p.bezierCurveTo(
+    cx - w * 0.46, cy + h * 0.02,
+    cx - w * 0.50, cy + h * 0.10,
+    cx - w * 0.44, cy + h * 0.18
+  );
+  // Bottom temporal to occipital
+  p.bezierCurveTo(
+    cx - w * 0.40, cy + h * 0.22,
+    cx - w * 0.36, cy + h * 0.30,
+    cx - w * 0.32, cy + h * 0.35
+  );
+  // Occipital lobe
+  p.bezierCurveTo(
+    cx - w * 0.30, cy + h * 0.40,
+    cx - w * 0.28, cy + h * 0.42,
+    cx - w * 0.18, cy + h * 0.40
+  );
+  // Back to center bottom (cerebellum area)
+  p.bezierCurveTo(
+    cx - w * 0.10, cy + h * 0.38,
+    cx - w * 0.04, cy + h * 0.34,
+    cx, cy + h * 0.30
+  );
+
+  // --- Right hemisphere (mirror, going counter-clockwise) ---
+  p.bezierCurveTo(
+    cx + w * 0.04, cy + h * 0.34,
+    cx + w * 0.10, cy + h * 0.38,
+    cx + w * 0.18, cy + h * 0.40
+  );
+  p.bezierCurveTo(
+    cx + w * 0.28, cy + h * 0.42,
+    cx + w * 0.30, cy + h * 0.40,
+    cx + w * 0.32, cy + h * 0.35
+  );
+  p.bezierCurveTo(
+    cx + w * 0.36, cy + h * 0.30,
+    cx + w * 0.40, cy + h * 0.22,
+    cx + w * 0.44, cy + h * 0.18
+  );
+  p.bezierCurveTo(
+    cx + w * 0.50, cy + h * 0.10,
+    cx + w * 0.46, cy + h * 0.02,
+    cx + w * 0.42, cy - h * 0.05
+  );
+  p.bezierCurveTo(
+    cx + w * 0.48, cy - h * 0.15,
+    cx + w * 0.52, cy - h * 0.35,
+    cx + w * 0.50, cy - h * 0.55
+  );
+  p.bezierCurveTo(
+    cx + w * 0.48, cy - h * 0.85,
+    cx + w * 0.12, cy - h * 0.92,
+    cx, cy - h * 0.88
+  );
+
+  p.closePath();
+  return p;
+}
+
+function testBrainPoint(x, y) {
+  if (!brainPath) return false;
+  return ctx.isPointInPath(brainPath, x, y);
+}
+
+function rebuildBrain() {
+  brainPath = buildBrainPath(CX, CY, SCALE_FACTOR);
+  // Reposition neurons inside new brain shape
+  for (const n of neurons) {
+    const p = randomBrainPoint();
+    n.baseX = p.x; n.baseY = p.y;
+    n.x = n.baseX; n.y = n.baseY;
+  }
+}
+
+function randomBrainPoint() {
+  const w = Math.min(W, H) * SCALE_FACTOR;
+  const h = w * 0.75;
+  for (let i = 0; i < 500; i++) {
+    const x = CX + (Math.random() - 0.5) * w * 1.1;
+    const y = CY + (Math.random() - 0.5) * h * 1.1;
+    if (testBrainPoint(x, y)) return { x, y };
+  }
+  return { x: CX, y: CY };
+}
+
+// ---- Particles ----
+const neurons = [];
+const NUM = 260;
+const synapses = [];
+
+function initNeurons() {
+  neurons.length = 0;
+  synapses.length = 0;
+  brainPath = buildBrainPath(CX, CY, SCALE_FACTOR);
+
+  // Generate main neurons inside brain
+  for (let i = 0; i < NUM; i++) {
+    const p = randomBrainPoint();
+    neurons.push({
+      x: p.x, y: p.y, baseX: p.x, baseY: p.y,
+      vx: (Math.random()-0.5)*0.08, vy: (Math.random()-0.5)*0.08,
+      r: 0.8 + Math.random() * 2.2,
+      phase: Math.random() * 6.28,
+      freq: 0.15 + Math.random() * 0.35,
+      act: Math.random(),
+      cluster: Math.floor(Math.random() * 6)
+    });
+  }
+
+  // Build synapses (neural connections)
+  for (let i = 0; i < NUM * 2.2; i++) {
+    let a = Math.floor(Math.random() * neurons.length);
+    let b = Math.floor(Math.random() * neurons.length);
+    while (b === a) b = Math.floor(Math.random() * neurons.length);
+    const n1 = neurons[a], n2 = neurons[b];
+    const d = Math.hypot(n1.x - n2.x, n1.y - n2.y);
+    if (d < Math.min(W, H) * 0.22) {
+      synapses.push({ a, b, d, pulse: Math.random(), speed: 0.08 + Math.random() * 0.18 });
+    }
+  }
+}
+
+// Glowing orbs
 const orbs = [];
 for (let i = 0; i < 3; i++) {
   orbs.push({
-    x: W/2, y: H/2,
-    vx: (Math.random() - 0.5) * 0.2,
-    vy: (Math.random() - 0.5) * 0.2,
-    rad: 60 + Math.random() * 100,
-    hue: i === 0 ? 180 : i === 1 ? 150 : 40,
-    alpha: 0.02 + Math.random() * 0.02
+    x: CX, y: CY,
+    ox: CX, oy: CY,
+    vx: (Math.random()-0.5)*0.15, vy: (Math.random()-0.5)*0.15,
+    maxR: 80 + Math.random() * 120,
+    hue: i === 0 ? 185 : i === 1 ? 160 : 45,
+    alpha: 0.015 + Math.random() * 0.015
   });
 }
 
-// Brain particles with neural structure
-const neurons = [];
-const NUM = 200;
-const CX = W / 2, CY = H / 2;
-
-function brainField(x, y) {
-  const dx = x - CX, dy = y - CY;
-  const left = dx < 0;
-  const hw = Math.min(W, H) * 0.20;
-  const hh = Math.min(W, H) * 0.18;
-  const nx = left ? dx + hw * 0.2 : dx - hw * 0.2;
-  const ny = dy;
-  const inH = (nx*nx)/(hw*hw) + (ny*ny)/(hh*hh) < 1;
-  const inB = Math.abs(dx) < Math.min(W,H)*0.05 && Math.abs(dy) < hh * 0.35;
-  const stemW = Math.min(W,H)*0.025;
-  const stemY0 = CY + hh * 0.5;
-  const inS = Math.abs(dx) < stemW && dy > stemY0 && dy < stemY0 + Math.min(W,H)*0.12;
-  return inH || inB || inS;
-}
-
-function randomPoint() {
-  for (let i = 0; i < 300; i++) {
-    const x = CX + (Math.random() - 0.5) * Math.min(W, H) * 0.7;
-    const y = CY + (Math.random() - 0.5) * Math.min(W, H) * 0.6;
-    if (brainField(x, y)) return { x, y };
-  }
-  return { x: CX + (Math.random()-0.5)*20, y: CY + (Math.random()-0.5)*20 };
-}
-
-for (let i = 0; i < NUM; i++) {
-  const p = randomPoint();
-  neurons.push({
-    x: p.x, y: p.y,
-    baseX: p.x, baseY: p.y,
-    vx: (Math.random()-0.5)*0.1,
-    vy: (Math.random()-0.5)*0.1,
-    r: 1 + Math.random() * 2.5,
-    phase: Math.random() * 6.28,
-    freq: 0.2 + Math.random() * 0.4,
-    act: Math.random(),
-    hue: 160 + Math.random() * 40,
-    cluster: Math.floor(Math.random() * 5)
-  });
-}
-
-// Build synapses
-const synapses = [];
-for (let i = 0; i < NUM * 2; i++) {
-  let a = Math.floor(Math.random() * neurons.length);
-  let b = Math.floor(Math.random() * neurons.length);
-  while (b === a) b = Math.floor(Math.random() * neurons.length);
-  const n1 = neurons[a], n2 = neurons[b];
-  const d = Math.hypot(n1.x - n2.x, n1.y - n2.y);
-  if (d < Math.min(W, H) * 0.3) {
-    synapses.push({ a, b, dist: d, pulsePos: Math.random(), speed: 0.1 + Math.random() * 0.2 });
-  }
-}
-
-// Floating embers
+// Embers
 const embers = [];
-for (let i = 0; i < 80; i++) {
+for (let i = 0; i < 60; i++) {
   embers.push({
     x: Math.random() * W, y: Math.random() * H,
-    vx: (Math.random()-0.5)*0.2, vy: -0.1 - Math.random() * 0.2,
-    r: 0.3 + Math.random() * 1,
-    life: Math.random(),
-    maxLife: 3 + Math.random() * 4
+    vx: (Math.random()-0.5)*0.15, vy: -0.08 - Math.random()*0.15,
+    r: 0.3 + Math.random() * 0.8,
+    life: Math.random(), maxLife: 4 + Math.random() * 5
   });
 }
 
 let mouse = { x: CX, y: CY };
 let targetMouse = { x: CX, y: CY };
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  targetMouse.x = e.clientX - rect.left;
-  targetMouse.y = e.clientY - rect.top;
+cvs.addEventListener('mousemove', e => {
+  const r = cvs.getBoundingClientRect();
+  targetMouse.x = e.clientX - r.left;
+  targetMouse.y = e.clientY - r.top;
 });
-canvas.addEventListener('touchmove', e => {
-  const t = e.touches[0];
-  if (!t) return;
-  const rect = canvas.getBoundingClientRect();
-  targetMouse.x = t.clientX - rect.left;
-  targetMouse.y = t.clientY - rect.top;
+cvs.addEventListener('touchmove', e => {
+  const t = e.touches[0]; if (!t) return;
+  const r = cvs.getBoundingClientRect();
+  targetMouse.x = t.clientX - r.left;
+  targetMouse.y = t.clientY - r.top;
 }, { passive: true });
 
-let t = 0;
+let time = 0;
 function draw() {
-  t += 0.016;
-  mouse.x += (targetMouse.x - mouse.x) * 0.03;
-  mouse.y += (targetMouse.y - mouse.y) * 0.03;
-  const influence = Math.max(0, 1 - Math.hypot(mouse.x - CX, mouse.y - CY) / (Math.min(W, H) * 0.4));
-  const mi = influence * 0.15;
+  time += 0.016;
+  mouse.x += (targetMouse.x - mouse.x) * 0.04;
+  mouse.y += (targetMouse.y - mouse.y) * 0.04;
+
+  const mi = Math.max(0, 1 - Math.hypot(mouse.x-CX, mouse.y-CY) / (Math.min(W,H)*0.35)) * 0.12;
 
   ctx.clearRect(0, 0, W, H);
 
-  // Deep glow orbs
+  // Background gradient
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.min(W,H)*0.5);
+  bg.addColorStop(0, '#050a16');
+  bg.addColorStop(0.5, '#030612');
+  bg.addColorStop(1, '#02040a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Glowing orbs
   for (const o of orbs) {
-    o.x += o.vx + (mouse.x - CX) * 0.0003 * influence;
-    o.y += o.vy + (mouse.y - CY) * 0.0003 * influence;
+    const dx = CX - o.x, dy = CY - o.y;
+    o.x += o.vx + (mouse.x - CX) * 0.0002 * mi + dx * 0.0005;
+    o.y += o.vy + (mouse.y - CY) * 0.0002 * mi + dy * 0.0005;
     o.vx *= 0.995; o.vy *= 0.995;
-    const grd = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.rad);
-    const hue = o.hue + Math.sin(t * 0.1) * 10;
-    grd.addColorStop(0, `hsla(${hue},80%,55%,${o.alpha * 0.5})`);
-    grd.addColorStop(0.5, `hsla(${hue},80%,40%,${o.alpha * 0.3})`);
-    grd.addColorStop(1, `hsla(${hue},80%,30%,0)`);
+    const pulseR = o.maxR * (0.85 + 0.15 * Math.sin(time * 0.3 + o.hue));
+    const grd = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, pulseR);
+    const h = o.hue + Math.sin(time * 0.08) * 8;
+    grd.addColorStop(0, `hsla(${h},70%,55%,${o.alpha * 0.6})`);
+    grd.addColorStop(0.4, `hsla(${h},70%,40%,${o.alpha * 0.3})`);
+    grd.addColorStop(1, `hsla(${h},70%,30%,0)`);
     ctx.fillStyle = grd;
     ctx.beginPath();
-    ctx.arc(o.x, o.y, o.rad, 0, 6.28);
+    ctx.arc(o.x, o.y, pulseR, 0, 6.28);
     ctx.fill();
   }
 
+  // Rebuild brain path for hit testing and outline
+  brainPath = buildBrainPath(CX, CY, SCALE_FACTOR);
+
+  // Brain outline - subtle glow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,240,255,0.04)';
+  ctx.shadowBlur = 40;
+  ctx.strokeStyle = 'rgba(0,240,255,0.04)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke(brainPath);
+  ctx.restore();
+
+  // Second outline layer - thinner, brighter
+  ctx.strokeStyle = 'rgba(0,240,255,0.015)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([4,6]);
+  ctx.stroke(brainPath);
+  ctx.setLineDash([]);
+
+  // Label brain regions
+  ctx.save();
+  ctx.font = '7px Orbitron,sans-serif';
+  ctx.fillStyle = 'rgba(0,240,255,0.04)';
+  ctx.textAlign = 'center';
+  ctx.fillText('FRONTAL LOBE', CX, CY - Math.min(W,H)*SCALE_FACTOR*0.75*0.55);
+  ctx.fillText('TEMPORAL LOBE', CX - Math.min(W,H)*SCALE_FACTOR*0.4, CY + Math.min(W,H)*SCALE_FACTOR*0.75*0.1);
+  ctx.fillText('OCCIPITAL LOBE', CX + Math.min(W,H)*SCALE_FACTOR*0.35, CY + Math.min(W,H)*SCALE_FACTOR*0.75*0.25);
+  ctx.restore();
+
   // Synapses
+  const nLen = neurons.length;
   for (const s of synapses) {
+    if (s.a >= nLen || s.b >= nLen) continue;
     const n1 = neurons[s.a], n2 = neurons[s.b];
-    if (!n1 || !n2) continue;
     const d = Math.hypot(n1.x - n2.x, n1.y - n2.y);
-    if (d > Math.min(W, H) * 0.3) continue;
+    if (d > Math.min(W, H) * 0.25) continue;
     const act = (n1.act + n2.act) * 0.5;
-    const alpha = act * 0.12;
-    if (alpha < 0.01) continue;
+    if (act < 0.25) continue;
+    const alpha = (act - 0.25) * 0.2;
     ctx.beginPath();
     ctx.moveTo(n1.x, n1.y);
     ctx.lineTo(n2.x, n2.y);
-    ctx.strokeStyle = `rgba(0,240,255,${alpha})`;
-    ctx.lineWidth = 0.3 + act * 0.8;
+    ctx.strokeStyle = `rgba(0,240,255,${Math.min(alpha, 0.08)})`;
+    ctx.lineWidth = 0.2 + act * 0.5;
     ctx.stroke();
 
-    // Pulse
-    s.pulsePos += s.speed * 0.016;
-    if (s.pulsePos > 1) s.pulsePos = 0;
-    const px = n1.x + (n2.x - n1.x) * s.pulsePos;
-    const py = n1.y + (n2.y - n1.y) * s.pulsePos;
-    const pulseAlpha = act * 0.3;
-    if (pulseAlpha > 0.05) {
-      const g = ctx.createRadialGradient(px, py, 0, px, py, 4 + act * 4);
-      g.addColorStop(0, `rgba(110,231,183,${pulseAlpha})`);
-      g.addColorStop(1, `rgba(0,240,255,0)`);
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(px, py, 4 + act * 4, 0, 6.28);
-      ctx.fill();
-    }
+    s.pulse += s.speed * 0.016;
+    if (s.pulse > 1) s.pulse = 0;
+    const px = n1.x + (n2.x - n1.x) * s.pulse;
+    const py = n1.y + (n2.y - n1.y) * s.pulse;
+    ctx.beginPath();
+    ctx.arc(px, py, 1.2 + act * 2, 0, 6.28);
+    const g = ctx.createRadialGradient(px, py, 0, px, py, 2 + act * 2);
+    g.addColorStop(0, `rgba(110,231,183,${act * 0.35})`);
+    g.addColorStop(1, `rgba(0,240,255,0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
   }
 
   // Neurons
   for (const n of neurons) {
-    const wave = Math.sin(t * n.freq + n.phase);
-    n.act = 0.4 + 0.6 * (wave * 0.5 + 0.5);
-    n.x += (n.baseX - n.x) * 0.01 + (mouse.x - CX) * 0.0001 * mi + n.vx;
-    n.y += (n.baseY - n.y) * 0.01 + (mouse.y - CY) * 0.0001 * mi + n.vy;
-    n.vx *= 0.9; n.vy *= 0.9;
+    const wave = Math.sin(time * n.freq + n.phase);
+    n.act = 0.3 + 0.7 * (wave * 0.5 + 0.5);
+    n.x += (n.baseX - n.x) * 0.008 + (mouse.x - CX) * 0.00008 * mi + n.vx;
+    n.y += (n.baseY - n.y) * 0.008 + (mouse.y - CY) * 0.00008 * mi + n.vy;
+    n.vx *= 0.92; n.vy *= 0.92;
 
-    const rad = n.r * (0.7 + n.act * 0.4);
-    const glowR = rad * 8;
-    const ga = n.act * 0.15;
+    if (!testBrainPoint(n.x, n.y)) {
+      n.vx += (CX - n.x) * 0.002;
+      n.vy += (CY - n.y) * 0.002;
+    }
+
+    const rad = n.r * (0.6 + n.act * 0.5);
+    const glowR = rad * 6;
+    const ga = n.act * 0.12;
     if (ga > 0.01) {
-      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
-      grd.addColorStop(0, `rgba(0,240,255,${ga})`);
-      grd.addColorStop(1, 'rgba(0,240,255,0)');
-      ctx.fillStyle = grd;
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+      g.addColorStop(0, `rgba(0,240,255,${ga})`);
+      g.addColorStop(1, 'rgba(0,240,255,0)');
+      ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(n.x, n.y, glowR, 0, 6.28);
       ctx.fill();
@@ -561,60 +641,59 @@ function draw() {
 
     ctx.beginPath();
     ctx.arc(n.x, n.y, rad, 0, 6.28);
-    ctx.fillStyle = `rgba(0,240,255,${0.2 + n.act * 0.4})`;
+    ctx.fillStyle = `rgba(0,240,255,${0.15 + n.act * 0.35})`;
     ctx.fill();
-    ctx.beginPath();
-    ctx.arc(n.x, n.y, rad * 0.5, 0, 6.28);
-    ctx.fillStyle = `rgba(209,250,229,${0.1 + n.act * 0.5})`;
-    ctx.fill();
+
+    if (n.act > 0.6) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, rad * 0.35, 0, 6.28);
+      ctx.fillStyle = `rgba(209,250,229,${n.act * 0.35})`;
+      ctx.fill();
+    }
+  }
+
+  // Corpus callosum bridge connections (dense horizontal connections across hemispheres)
+  for (let i = 0; i < neurons.length; i++) {
+    for (let j = i + 1; j < neurons.length; j++) {
+      const dx = Math.abs(neurons[i].x - neurons[j].x);
+      const dy = Math.abs(neurons[i].y - neurons[j].y);
+      if (dx < Math.min(W, H) * 0.08 && dy < Math.min(W, H) * 0.06 && neurons[i].cluster !== neurons[j].cluster) {
+        const act = (neurons[i].act + neurons[j].act) * 0.5;
+        if (act < 0.5) continue;
+        ctx.beginPath();
+        ctx.moveTo(neurons[i].x, neurons[i].y);
+        ctx.lineTo(neurons[j].x, neurons[j].y);
+        ctx.strokeStyle = `rgba(0,240,255,${(act - 0.5) * 0.06})`;
+        ctx.lineWidth = 0.3;
+        ctx.stroke();
+      }
+    }
   }
 
   // Embers
   for (const e of embers) {
-    e.x += e.vx + (mouse.x - CX) * 0.0002 * influence;
+    e.x += e.vx + (mouse.x - CX) * 0.0001 * mi;
     e.y += e.vy;
-    e.life += 0.008;
+    e.life += 0.01;
     if (e.life > e.maxLife || e.y < -10 || e.x < -10 || e.x > W + 10) {
       e.x = Math.random() * W;
       e.y = H + 5;
       e.life = 0;
-      e.vx = (Math.random() - 0.5) * 0.2;
-      e.vy = -0.1 - Math.random() * 0.3;
+      e.vx = (Math.random() - 0.5) * 0.15;
+      e.vy = -0.08 - Math.random() * 0.2;
     }
-    const a = Math.max(0, 1 - e.life / e.maxLife) * 0.4;
+    const a = Math.max(0, 1 - e.life / e.maxLife) * 0.3;
     ctx.beginPath();
     ctx.arc(e.x, e.y, e.r, 0, 6.28);
     ctx.fillStyle = `rgba(0,240,255,${a})`;
     ctx.fill();
   }
 
-  // Brain outline glow
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,240,255,0.02)';
-  ctx.shadowBlur = 60;
-  ctx.strokeStyle = 'rgba(0,240,255,0.02)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3,6]);
-  const hw = Math.min(W,H)*0.20, hh = Math.min(W,H)*0.18;
-  ctx.beginPath();
-  ctx.ellipse(CX - hw*0.2, CY, hw, hh, 0, 0, 6.28);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(CX + hw*0.2, CY, hw, hh, 0, 0, 6.28);
-  ctx.stroke();
-  ctx.restore();
-
   requestAnimationFrame(draw);
 }
-draw();
 
-// Dynamic resize for particles
-window.addEventListener('resize', () => {
-  resize();
-  for (const n of neurons) {
-    n.baseX = n.x; n.baseY = n.y;
-  }
-});
+initNeurons();
+draw();
 </script>
 </body>
 </html>
