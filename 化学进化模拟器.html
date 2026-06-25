@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>真实化学进化模拟器</title>
+<style>
+:root{--bg:#060a12;--panel:rgba(17,24,39,0.92);--text:#e5e7eb;--accent:#10b981;--border:#1e293b;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:"Microsoft YaHei",system-ui,sans-serif;user-select:none;}
+canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 50% 50%,#0d1520 0%,#03060c 100%);cursor:crosshair;}
+
+.top{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:center;gap:10px;padding:3px 10px;background:var(--panel);border-bottom:1px solid var(--border);backdrop-filter:blur(8px);flex-wrap:wrap;font-size:10px;min-height:32px;}
+.top .t{color:var(--accent);font-weight:bold;font-size:11px;letter-spacing:.5px;margin-right:4px;}
+.st{text-align:center;font-family:monospace;}
+.sl{font-size:7px;color:#6b7280;}
+.sv{font-size:11px;font-weight:bold;}
+
+.pnl{position:absolute;top:36px;right:4px;z-index:10;width:240px;max-height:calc(100vh-44px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px;backdrop-filter:blur(8px);}
+.pnl h3{font-size:9px;color:var(--accent);margin:4px 0 2px;letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:2px;}
+.pnl h3:first-child{margin-top:0;}
+.cr{display:flex;align-items:center;justify-content:space-between;margin:1px 0;font-size:9px;}
+.cr label{color:#9ca3af;flex:1;}
+.cr input[type=range]{width:58px;accent-color:var(--accent);height:10px;}
+.cr span{width:20px;text-align:right;font-family:monospace;font-size:8px;}
+button{background:var(--accent);color:#fff;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-weight:600;font-size:8px;transition:all .15s;}
+button:hover{filter:brightness(1.2);}
+.log{max-height:60px;overflow-y:auto;font-size:7px;color:#9ca3af;font-family:monospace;line-height:1.3;background:#060a14;border-radius:3px;padding:2px;border:1px solid var(--border);margin-top:2px;}
+.log::-webkit-scrollbar{width:2px;}
+.log::-webkit-scrollbar-thumb{background:#374151;border-radius:2px;}
+.mlist{font-size:8px;color:var(--accent);font-family:monospace;max-height:60px;overflow-y:auto;}
+
+.popup{position:absolute;top:50%;left:50%;z-index:20;transform:translate(-50%,-50%);background:rgba(0,0,0,0.92);border:2px solid var(--accent);border-radius:12px;padding:12px 22px;text-align:center;pointer-events:none;opacity:0;transition:opacity .5s;}
+.popup.show{opacity:1;}
+.popup h2{color:var(--accent);font-size:16px;margin-bottom:2px;}
+.popup p{color:#9ca3af;font-size:10px;}
+
+.leg{position:absolute;bottom:4px;left:4px;z-index:10;display:flex;gap:3px;flex-wrap:wrap;background:rgba(17,24,39,0.8);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:4px;padding:2px 5px;max-width:450px;}
+.leg span{font-size:7px;color:#9ca3af;display:flex;align-items:center;gap:1px;white-space:nowrap;}
+.leg i{width:4px;height:4px;border-radius:50%;display:inline-block;}
+
+.pulse{position:absolute;pointer-events:none;border-radius:50%;background:rgba(255,255,255,0.5);transform:translate(-50%,-50%);animation:pulseOut .6s ease-out forwards;z-index:3;}
+@keyframes pulseOut{0%{width:15px;height:15px;opacity:.8}100%{width:100px;height:100px;opacity:0}}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div class="top">
+    <span class="t">⚛ 真实化学进化</span>
+    <span style="font-size:8px;color:#9ca3af;" id="eraDisplay">原子汤</span>
+    <div class="st"><div class="sl">原子</div><div class="sv" id="vAtom">0</div></div>
+    <div class="st"><div class="sl">分子</div><div class="sv" id="vMol" style="color:#fbbf24;">0</div></div>
+    <div class="st"><div class="sl">种类</div><div class="sv" id="vTypes" style="color:#4dabf7;">0</div></div>
+    <div class="st"><div class="sl">反应</div><div class="sv" id="vRxn" style="color:#a78bfa;">0</div></div>
+    <div class="st"><div class="sl">原细胞</div><div class="sv" id="vCell" style="color:#ffd43b;">0</div></div>
+    <div class="st"><div class="sl">🌡</div><div class="sv" id="vTemp">25</div></div>
+</div>
+
+<div class="pnl">
+    <h3>环境参数</h3>
+    <div class="cr"><label>温度</label><input type="range" id="cTemp" min="0" max="100" value="25"><span id="dTemp">25°C</span></div>
+    <div class="cr"><label>原子密度</label><input type="range" id="cDens" min="5" max="100" value="40"><span id="dDens">40</span></div>
+    <div class="cr"><label>成键倾向</label><input type="range" id="cBind" min="5" max="100" value="50"><span id="dBind">50%</span></div>
+    <div class="cr"><label>速度</label><input type="range" id="cSpeed" min="1" max="30" value="1"><span id="dSpeed">1x</span></div>
+
+    <h3>已识别分子 <span id="molCount" style="color:#fbbf24;float:right;">0</span></h3>
+    <div class="mlist" id="molList" style="max-height:50px;"></div>
+
+    <h3>日志</h3>
+    <div class="log" id="logBox"><div style="color:#6b7280;">等待化学反应...</div></div>
+
+    <h3>里程碑 <span id="msCount" style="color:var(--accent);float:right;">0</span></h3>
+    <div class="mlist" id="msList"></div>
+
+    <h3>操作</h3>
+    <div style="display:flex;gap:2px;flex-wrap:wrap;">
+        <button onclick="resetSim()">🔄 重置</button>
+        <button onclick="injectAtoms()">+原子</button>
+        <button onclick="togglePause()" id="btnPause">⏸</button>
+        <button onclick="this.parentElement.parentElement.classList.toggle('hidden')">✖</button>
+    </div>
+    <div style="font-size:7px;color:#6b7280;margin-top:2px;">点击画布注入原子</div>
+</div>
+
+<div class="leg" id="legendBox"></div>
+
+<div class="popup" id="popup">
+    <h2 id="popTitle">⚛ 里程碑</h2>
+    <p id="popDesc">化学反应</p>
+</div>
+
+<script>
+// ═══════════════ 画布初始化 ═══════════════
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let W=0,H=0,dpr=Math.min(devicePixelRatio||1,2);
+function resize(){W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+resize();addEventListener('resize',resize);
+
+// ═══════════════ 真实元素数据 ═══════════════
+const ELEMENTS={
+    H:{sym:'H',Z:1,val:1,EN:2.20,color:'#f0f0f0',r:5,mass:1.0,name:'氢'},
+    C:{sym:'C',Z:6,val:4,EN:2.55,color:'#555555',r:6,mass:12.0,name:'碳'},
+    N:{sym:'N',Z:7,val:3,EN:3.04,color:'#3050f8',r:6,mass:14.0,name:'氮'},
+    O:{sym:'O',Z:8,val:2,EN:3.44,color:'#ff0d0d',r:6,mass:16.0,name:'氧'},
+    Na:{sym:'Na',Z:11,val:1,EN:0.93,color:'#ab5cf2',r:8,mass:23.0,name:'钠'},
+    Mg:{sym:'Mg',Z:12,val:2,EN:1.31,color:'#8f00ff',r:7,mass:24.3,name:'镁'},
+    P:{sym:'P',Z:15,val:3,EN:2.19,color:'#ff8000',r:7,mass:31.0,name:'磷'},
+    S:{sym:'S',Z:16,val:2,EN:2.58,color:'#c8c800',r:7,mass:32.1,name:'硫'},
+    Cl:{sym:'Cl',Z:17,val:1,EN:3.16,color:'#1ff01f',r:7,mass:35.5,name:'氯'},
+    K:{sym:'K',Z:19,val:1,EN:0.82,color:'#8f40d4',r:9,mass:39.1,name:'钾'},
+    Ca:{sym:'Ca',Z:20,val:2,EN:1.00,color:'#3dff00',r:8,mass:40.1,name:'钙'},
+    Fe:{sym:'Fe',Z:26,val:2,EN:1.83,color:'#b05a2c',r:7,mass:55.8,name:'铁'},
+    Si:{sym:'Si',Z:14,val:4,EN:1.90,color:'#d4a574',r:7,mass:28.1,name:'硅'},
+    Al:{sym:'Al',Z:13,val:3,EN:1.61,color:'#bfbfbf',r:7,mass:27.0,name:'铝'},
+};
+const ELEM_KEYS=Object.keys(ELEMENTS);
+
+// ═══════════════ 已知分子数据库（用于识别） ═══════════════
+const MOLECULE_DB=[
+    {formula:'H₂',name:'氢气',atoms:{H:2},color:'#d0e8ff',tier:1,desc:'氢分子'},
+    {formula:'O₂',name:'氧气',atoms:{O:2},color:'#5c7cfa',tier:1,desc:'氧分子'},
+    {formula:'N₂',name:'氮气',atoms:{N:2},color:'#748ffc',tier:1,desc:'氮分子'},
+    {formula:'Cl₂',name:'氯气',atoms:{Cl:2},color:'#63e663',tier:1,desc:'氯分子'},
+    {formula:'H₂O',name:'水',atoms:{H:2,O:1},color:'#4dabf7',tier:2,desc:'水分子'},
+    {formula:'CO₂',name:'二氧化碳',atoms:{C:1,O:2},color:'#868e96',tier:2,desc:'二氧化碳'},
+    {formula:'CO',name:'一氧化碳',atoms:{C:1,O:1},color:'#adb5bd',tier:2,desc:'一氧化碳'},
+    {formula:'NaCl',name:'氯化钠',atoms:{Na:1,Cl:1},color:'#da77f2',tier:2,desc:'食盐'},
+    {formula:'HCl',name:'氯化氢',atoms:{H:1,Cl:1},color:'#69db7c',tier:2,desc:'盐酸'},
+    {formula:'MgO',name:'氧化镁',atoms:{Mg:1,O:1},color:'#b197fc',tier:2,desc:'氧化镁'},
+    {formula:'CaO',name:'氧化钙',atoms:{Ca:1,O:1},color:'#d8f5a2',tier:2,desc:'氧化钙'},
+    {formula:'NH₃',name:'氨',atoms:{N:1,H:3},color:'#845ef7',tier:2,desc:'氨'},
+    {formula:'H₂S',name:'硫化氢',atoms:{H:2,S:1},color:'#fcc419',tier:2,desc:'硫化氢'},
+    {formula:'SiO₂',name:'二氧化硅',atoms:{Si:1,O:2},color:'#e9ecef',tier:2,desc:'石英'},
+    {formula:'Al₂O₃',name:'氧化铝',atoms:{Al:2,O:3},color:'#dee2e6',tier:2,desc:'刚玉'},
+    {formula:'CH₄',name:'甲烷',atoms:{C:1,H:4},color:'#adb5bd',tier:3,desc:'最简单的有机物'},
+    {formula:'C₂H₆',name:'乙烷',atoms:{C:2,H:6},color:'#ced4da',tier:3,desc:'乙烷'},
+    {formula:'CH₃OH',name:'甲醇',atoms:{C:1,H:4,O:1},color:'#a5d8ff',tier:3,desc:'甲醇'},
+    {formula:'HCHO',name:'甲醛',atoms:{C:1,H:2,O:1},color:'#ffc078',tier:3,desc:'甲醛'},
+    {formula:'HCOOH',name:'甲酸',atoms:{C:1,H:2,O:2},color:'#f06595',tier:3,desc:'甲酸'},
+    {formula:'NH₂CHO',name:'甲酰胺',atoms:{N:1,H:3,C:1,O:1},color:'#b197fc',tier:3,desc:'甲酰胺'},
+    {formula:'C₂H₅OH',name:'乙醇',atoms:{C:2,H:6,O:1},color:'#d0ebff',tier:3,desc:'乙醇'},
+    {formula:'H₂CO₃',name:'碳酸',atoms:{H:2,C:1,O:3},color:'#74c0fc',tier:3,desc:'碳酸'},
+    {formula:'C₃H₈',name:'丙烷',atoms:{C:3,H:8},color:'#dee2e6',tier:3,desc:'丙烷'},
+    {formula:'CO(NH₂)₂',name:'尿素',atoms:{C:1,O:1,N:2,H:4},color:'#e599f7',tier:4,desc:'尿素'},
+    {formula:'C₆H₁₂O₆',name:'葡萄糖',atoms:{C:6,H:12,O:6},color:'#38d9a9',tier:4,desc:'葡萄糖',bio:true},
+    {formula:'C₂H₅NO₂',name:'甘氨酸',atoms:{C:2,H:5,N:1,O:2},color:'#69db7c',tier:4,desc:'最简单的氨基酸',bio:true},
+    {formula:'C₃H₇NO₂',name:'丙氨酸',atoms:{C:3,H:7,N:1,O:2},color:'#8ce99a',tier:4,desc:'丙氨酸',bio:true},
+    {formula:'C₅H₁₀O₄',name:'核糖',atoms:{C:5,H:10,O:4},color:'#63e6be',tier:5,desc:'核糖',bio:true},
+    {formula:'C₅H₁₀O₅',name:'脱氧核糖',atoms:{C:5,H:10,O:5},color:'#69db7c',tier:5,desc:'脱氧核糖',bio:true},
+    {formula:'C₁₀H₁₆N₅O₁₃P',name:'ATP',atoms:{C:10,H:16,N:5,O:13,P:1},color:'#ffd43b',tier:5,desc:'三磷酸腺苷',bio:true},
+    {formula:'C₄H₄',name:'环丁二烯',atoms:{C:4,H:4},color:'#9775fa',tier:3,desc:'环烃'},
+    {formula:'C₆H₆',name:'苯',atoms:{C:6,H:6},color:'#f783ac',tier:3,desc:'芳香烃'},
+];
+
+// ═══════════════ 原子系统 ═══════════════
+let atoms=[],bonds=[],nextId=1;
+let totalReactions=0,detectedMols=new Map(),milestones=new Set(),era=1;
+let paused=false,speed=1,temp=25,density=40,bindChance=0.5;
+let animFrame=0,discoveryCount=0;
+let protocells=[];
+
+const ERA_NAMES={1:'原子汤',2:'无机分子',3:'有机世界',4:'生物分子',5:'RNA世界',6:'原细胞',7:'进化黎明'};
+
+class Atom{
+    constructor(x,y,key){
+        this.id=nextId++;
+        this.key=key;
+        const d=ELEMENTS[key];
+        this.x=x;this.y=y;
+        this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;
+        this.r=d.r;
+        this.color=d.color;
+        this.sym=d.sym;
+        this.val=d.val;
+        this.EN=d.EN;
+        this.mass=d.mass;
+        this.usedVal=0; // how many valence electrons are used in bonds
+        this.tempVibrate=0;
+    }
+    get availableVal(){return this.val-this.usedVal;}
+    get isFull(){return this.usedVal>=this.val;}
+}
+
+function createAtom(x,y,key){
+    const a=new Atom(x,y,key);
+    atoms.push(a);
+    return a;
+}
+
+// ═══════════════ 键系统 ═══════════════
+class Bond{
+    constructor(a,b,order=1){
+        this.a=a;this.b=b;this.order=order;
+        a.usedVal+=order;b.usedVal+=order;
+        this.bondEnergy=this.calcEnergy();
+        this.id=nextId++;
+    }
+    calcEnergy(){
+        const d=Math.abs(ELEMENTS[this.a.key].EN-ELEMENTS[this.b.key].EN);
+        // Rough bond energy estimate based on EN difference and order
+        return this.order*(200-d*40);
+    }
+    strength(){
+        const d=Math.abs(ELEMENTS[this.a.key].EN-ELEMENTS[this.b.key].EN);
+        return Math.max(30,400-d*80)*this.order;
+    }
+    other(atom){return atom===this.a?this.b:this.a;}
+}
+
+// ═══════════════ 分子识别系统 ═══════════════
+function getConnectedComponent(startAtom){
+    const visited=new Set();
+    const component=[];
+    function dfs(atom){
+        if(visited.has(atom.id))return;
+        visited.add(atom.id);
+        component.push(atom);
+        for(const b of bonds){
+            const other=b.other(atom);
+            if(other&&!visited.has(other.id))dfs(other);
+        }
+    }
+    dfs(startAtom);
+    return component;
+}
+
+function getAllComponents(){
+    const visited=new Set();
+    const components=[];
+    for(const a of atoms){
+        if(!visited.has(a.id)){
+            const comp=getConnectedComponent(a);
+            for(const c of comp)visited.add(c.id);
+            if(comp.length>0)components.push(comp);
+        }
+    }
+    return components;
+}
+
+function countAtomsInComponent(comp){
+    const counts={};
+    for(const a of comp){
+        counts[a.key]=(counts[a.key]||0)+1;
+    }
+    return counts;
+}
+
+function formulaToString(counts){
+    const order=Hm(Hm(Hm(Hm(Hm(Hm(Hm([],'C'),'Si'),'N'),'P'),'O'),'S'),'H');
+    function Hm(arr,k){arr.push(k);return arr;}
+    let parts=[];
+    for(const key of order){
+        if(counts[key]){
+            parts.push(key+(counts[key]>1?subscript(counts[key]):''));
+        }
+    }
+    for(const key of Object.keys(counts)){
+        if(!order.includes(key))parts.push(key+(counts[key]>1?subscript(counts[key]):''));
+    }
+    return parts.join('');
+}
+
+function subscript(n){return'₀₁₂₃₄₅₆₇₈₉'[n]||n.toString();}
+
+function matchMolecule(counts){
+    for(const mol of MOLECULE_DB){
+        const mc=mol.atoms;
+        if(Object.keys(counts).length!==Object.keys(mc).length)continue;
+        let match=true;
+        for(const k of Object.keys(counts)){
+            if(counts[k]!==(mc[k]||0)){match=false;break;}
+        }
+        if(match)return mol;
+    }
+    return null;
+}
+
+function detectMolecules(){
+    const comps=getAllComponents();
+    const foundFormulas=new Set();
+    let news=0;
+
+    for(const comp of comps){
+        // Only molecules with >1 atom
+        if(comp.length<2)continue;
+        const counts=countAtomsInComponent(comp);
+        const formula=formulaToString(counts);
+        if(foundFormulas.has(formula))continue;
+        foundFormulas.add(formula);
+
+        if(!detectedMols.has(formula)){
+            const mol=matchMolecule(counts);
+            const name=mol?mol.name:formula;
+            const color=mol?mol.color:'#aaaaaa';
+            const tier=mol?mol.tier:Math.min(6,comp.length);
+            const isBio=mol?mol.bio:false;
+            detectedMols.set(formula,{formula,name,color,tier,isBio,firstSeen:totalReactions});
+            discoveryCount++;
+            news++;
+
+            // Milestone check
+            if(mol&&mol.tier>=3){
+                const msKey=`tier${mol.tier}_${formula}`;
+                if(!milestones.has(msKey)){
+                    milestones.add(msKey);
+                    if(mol.tier>=4)showMilestone(`🧬 ${name} (${formula})`,mol.desc);
+                    if(mol.bio)showMilestone(`🦠 生物分子：${name}`,mol.desc);
+                    updateMSList();
+                }
+            }
+        }
+    }
+
+    if(news>0){
+        updateMolList();
+        updateEra();
+    }
+}
+
+// ═══════════════ 原细胞涌现系统 ═══════════════
+// 当大量复杂有机分子和能量存在时，原细胞自发形成
+function checkProtocellEmergence(){
+    const bioCount=[...detectedMols.values()].filter(m=>m.isBio).length;
+    const largeMolCount=[...detectedMols.values()].filter(m=>m.tier>=4).length;
+
+    if(protocells.length===0&&bioCount>=2&&largeMolCount>=3&&Math.random()<0.001*temp/25){
+        // Spontaneously form protocells!
+        const n=1+Math.floor(Math.random()*3);
+        for(let i=0;i<n;i++){
+            const x=50+Math.random()*(W-100);
+            const y=50+Math.random()*(H-100);
+            protocells.push({
+                x,y,energy:60,maxEnergy:100,size:8+Math.random()*4,
+                alive:true,age:0,gen:1,fitness:0,
+                color:`hsla(${Math.random()*360},70%,55%,0.8)`,
+                genome:Array.from({length:8},()=>Math.random()*2-1),
+                foodEaten:0
+            });
+        }
+        if(n>0){
+            showMilestone('🦠 原细胞出现！','复杂有机分子自发组装成原始细胞！生命诞生');
+            addLog(`🌍 原细胞涌现！${n}个原始细胞形成`);
+            updateCellStats();
+        }
+    }
+
+    // Protocell behavior
+    for(const c of protocells){
+        if(!c.alive)continue;
+        c.age++;
+        c.energy-=0.05*(0.5+(c.genome[2]+1)*0.5);
+
+        // Movement (random walk with drift toward food molecules)
+        c.vx=c.vx||0;c.vy=c.vy||0;
+        c.vx+=(Math.random()-0.5)*0.15;
+        c.vy+=(Math.random()-0.5)*0.15;
+        c.x+=c.vx;c.y+=c.vy;
+
+        // Absorb nearby organic molecules for energy
+        for(let i=atoms.length-1;i>=0;i--){
+            const a=atoms[i];
+            const d=Math.hypot(a.x-c.x,a.y-c.y);
+            if(d<c.size+3){
+                // Absorb if it's part of a large molecule
+                const comp=getConnectedComponent(a);
+                if(comp.length>=3){
+                    atoms.splice(i,1);
+                    c.energy=Math.min(c.maxEnergy,c.energy+20);
+                    c.fitness+=5;c.foodEaten++;
+                    // Remove all atoms in this component
+                    for(const ca of comp){
+                        if(ca!==a){
+                            const idx=atoms.indexOf(ca);
+                            if(idx>=0)atoms.splice(idx,1);
+                        }
+                    }
+                    // Remove related bonds
+                    for(let bi=bonds.length-1;bi>=0;bi--){
+                        const b=bonds[bi];
+                        if(!atoms.includes(b.a)||!atoms.includes(b.b)){
+                            bonds.splice(bi,1);
+                            // Restore valence
+                            if(!atoms.includes(b.a)){b.a.usedVal-=b.order;}
+                            if(!atoms.includes(b.b)){b.b.usedVal-=b.order;}
+                        }
+                    }
+                }
+            }
+        }
+
+        // Boundaries
+        if(c.x<0||c.x>W||c.y<0||c.y>H){
+            c.energy-=2;c.x=Math.max(2,Math.min(W-2,c.x));c.y=Math.max(2,Math.min(H-2,c.y));
+        }
+
+        // Death
+        if(c.energy<=0){c.alive=false;continue;}
+
+        // Division
+        if(c.energy>=80&&Math.random()<0.02*(temp/25)){
+            const child={...c};
+            child.x=c.x+(Math.random()-0.5)*20;
+            child.y=c.y+(Math.random()-0.5)*20;
+            child.energy=c.energy*0.4;
+            c.energy*=0.5;
+            child.gen=c.gen+1;
+            child.genome=c.genome.slice();
+            // Mutate
+            for(let i=0;i<child.genome.length;i++){
+                if(Math.random()<0.05){child.genome[i]+=(Math.random()-0.5)*0.3;child.genome[i]=Math.max(-1,Math.min(1,child.genome[i]));}
+            }
+            child.age=0;child.foodEaten=0;child.color=`hsla(${Math.random()*360},70%,55%,0.8)`;
+            protocells.push(child);
+            totalReactions++;
+            if(totalReactions%3===0)addLog(`🧬 原细胞分裂！第${child.gen}代`);
+        }
+    }
+    protocells=protocells.filter(c=>c.alive);
+}
+
+// ═══════════════ 成键/断键物理 ═══════════════
+function tryFormBond(a,b){
+    if(a===b)return false;
+    if(a.availableVal<=0||b.availableVal<=0)return false;
+    const dx=a.x-b.x,dy=a.y-b.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    const bondDist=(a.r+b.r)*0.7;
+
+    if(dist<bondDist+5&&Math.random()<bindChance){
+        // Determine bond order based on available valence
+        const maxOrder=Math.min(a.availableVal,b.availableVal);
+        let order=1;
+        // Check for possible double/triple bonds (common for C, N, O)
+        if(maxOrder>=2&&Math.random()<0.2*(temp/50))order=2;
+        if(maxOrder>=3&&Math.random()<0.05*(temp/50))order=3;
+
+        // Check if already bonded
+        for(const ob of bonds){
+            if((ob.a===a&&ob.b===b)||(ob.a===b&&ob.b===a))return false;
+        }
+
+        const bond=new Bond(a,b,order);
+        bonds.push(bond);
+        totalReactions++;
+        return true;
+    }
+    return false;
+}
+
+function checkBondBreaking(){
+    for(let i=bonds.length-1;i>=0;i--){
+        const b=bonds[i];
+        const a=b.a,b1=b.b;
+        if(!atoms.includes(a)||!atoms.includes(b1)){bonds.splice(i,1);continue;}
+
+        const dx=a.x-b1.x,dy=a.y-b1.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        const eqDist=(a.r+b1.r)*0.7*1.2;
+        const strength=b.strength();
+        const thermalStress=temp*0.08*b.order;
+
+        // Bond breaks if stretched too far or thermal energy exceeds bond strength
+        if(dist>eqDist*2.5||Math.random()<thermalStress/strength){
+            a.usedVal-=b.order;
+            b1.usedVal-=b.order;
+            bonds.splice(i,1);
+        }
+    }
+}
+
+// ═══════════════ 弹簧物理 ═══════════════
+function applyBondForces(){
+    for(const b of bonds){
+        const a=b.a,b1=b.b;
+        const dx=a.x-b1.x,dy=a.y-b1.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<0.1)continue;
+        const eqDist=(a.r+b1.r)*0.7;
+        const k=0.02;
+        const force=(dist-eqDist)*k;
+        const fx=dx/dist*force,fy=dy/dist*force;
+
+        const totalMass=a.mass+b1.mass;
+        a.vx-=fx*(b1.mass/totalMass);a.vy-=fy*(b1.mass/totalMass);
+        b1.vx+=fx*(a.mass/totalMass);b1.vy+=fy*(a.mass/totalMass);
+    }
+}
+
+// ═══════════════ 主更新循环 ═══════════════
+function update(){
+    const tFactor=temp/50;
+
+    // Thermal motion
+    for(const a of atoms){
+        a.vx+=(Math.random()-0.5)*0.3*tFactor;
+        a.vy+=(Math.random()-0.5)*0.3*tFactor;
+        a.vx*=0.96;a.vy*=0.96;
+        a.x+=a.vx;a.y+=a.vy;
+        // Wrap-around
+        if(a.x<-30)a.x=W+30;if(a.x>W+30)a.x=-30;
+        if(a.y<-30)a.y=H+30;if(a.y>H+30)a.y=-30;
+    }
+
+    // Bond spring forces
+    applyBondForces();
+
+    // Bond formation
+    for(let i=0;i<atoms.length;i++){
+        for(let j=i+1;j<atoms.length;j++){
+            const a=atoms[i],b=atoms[j];
+            const dx=a.x-b.x,dy=a.y-b.y;
+            const dist=Math.sqrt(dx*dx+dy*dy);
+            if(dist<(a.r+b.r)*0.7+10){
+                tryFormBond(a,b);
+            }
+        }
+    }
+
+    // Bond breaking
+    checkBondBreaking();
+
+    // Detect molecules
+    if(animFrame%30===0)detectMolecules();
+
+    // Protocell emergence
+    if(discoveryCount>=5||detectedMols.size>=10){
+        checkProtocellEmergence();
+    }
+
+    // Maintain density
+    const target=Math.round(density*0.8);
+    if(atoms.length<target&&animFrame%15===0){
+        const pool=era<=1?['H','O','N','C','Na','Cl','Mg','S','P','Ca','Fe','Si','Al']:
+                  era<=2?['H','C','N','O','P','S','Na','Cl','Mg','Ca','Fe','Si']:
+                  ['H','C','N','O','P','S'];
+        const key=pool[Math.floor(Math.random()*pool.length)];
+        const x=30+Math.random()*(W-60),y=30+Math.random()*(H-60);
+        createAtom(x,y,key);
+    }
+
+    // Remove isolated atoms that leave no traces
+    atoms=atoms.filter(a=>a.x>-100&&a.x<W+100&&a.y>-100&&a.y<H+100);
+}
+
+// ═══════════════ 渲染 ═══════════════
+function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // Draw bonds
+    ctx.lineCap='round';
+    for(const b of bonds){
+        const a=b.a,b2=b.b;
+        ctx.strokeStyle=`rgba(255,255,255,${0.08+b.order*0.06})`;
+        ctx.lineWidth=0.5+0.4*b.order;
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b2.x,b2.y);
+        ctx.stroke();
+    }
+
+    // Draw atoms
+    for(const a of atoms){
+        // Glow
+        ctx.beginPath();ctx.arc(a.x,a.y,a.r*2.5,0,Math.PI*2);
+        const g=ctx.createRadialGradient(a.x,a.y,0,a.x,a.y,a.r*2);
+        g.addColorStop(0,`${a.color}22`);g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;ctx.fill();
+
+        // Atom circle
+        ctx.beginPath();ctx.arc(a.x,a.y,a.r,0,Math.PI*2);
+        const grd=ctx.createRadialGradient(a.x-1,a.y-1,0,a.x,a.y,a.r);
+        grd.addColorStop(0,'rgba(255,255,255,0.25)');
+        grd.addColorStop(0.7,a.color);
+        grd.addColorStop(1,`${a.color}88`);
+        ctx.fillStyle=grd;ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=0.5;ctx.stroke();
+
+        // Symbol
+        ctx.fillStyle='#fff';
+        ctx.font=`${Math.max(6,a.r)}px sans-serif`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(a.sym,a.x,a.y+0.5);
+
+        // Valence indicator (available bonds)
+        if(a.availableVal>0){
+            const n=a.availableVal;
+            for(let v=0;v<n;v++){
+                const angle=Math.PI*2*v/n+animFrame*0.02;
+                const dx=Math.cos(angle)*(a.r+4);
+                const dy=Math.sin(angle)*(a.r+4);
+                ctx.beginPath();ctx.arc(a.x+dx,a.y+dy,1.5,0,Math.PI*2);
+                ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fill();
+            }
+        }
+    }
+
+    // Draw protocells
+    for(const c of protocells){
+        if(!c.alive)continue;
+        const h=Math.abs(Math.sin(c.x*0.01+c.y*0.01+c.age*0.05))*360;
+        ctx.save();
+        // Membrane glow
+        ctx.beginPath();ctx.arc(c.x,c.y,c.size*4,0,Math.PI*2);
+        ctx.fillStyle=`hsla(${h},70%,55%,0.04)`;
+        ctx.fill();
+        // Cell body
+        ctx.beginPath();ctx.arc(c.x,c.y,c.size,0,Math.PI*2);
+        const grd=ctx.createRadialGradient(c.x-2,c.y-2,1,c.x,c.y,c.size);
+        grd.addColorStop(0,`hsla(${h},70%,60%,0.7)`);
+        grd.addColorStop(1,`hsla(${h},60%,35%,0.5)`);
+        ctx.fillStyle=grd;ctx.fill();
+        ctx.strokeStyle=`hsla(${h},60%,50%,0.6)`;
+        ctx.lineWidth=1.2;ctx.stroke();
+        // Inner nucleus
+        ctx.beginPath();ctx.arc(c.x,c.y,c.size*0.25,0,Math.PI*2);
+        ctx.fillStyle=`hsla(${h},60%,70%,0.4)`;ctx.fill();
+        // Energy bar
+        const bw=c.size*2,bh=1.5;
+        ctx.fillStyle='rgba(0,0,0,0.4)';
+        ctx.fillRect(c.x-bw/2,c.y-c.size-3,bw,bh);
+        ctx.fillStyle=c.energy/c.maxEnergy>0.4?'#10b981':'#ef4444';
+        ctx.fillRect(c.x-bw/2,c.y-c.size-3,bw*(c.energy/c.maxEnergy),bh);
+        ctx.fillStyle='rgba(255,255,255,0.3)';
+        ctx.font='5px monospace';ctx.textAlign='center';
+        ctx.fillText(`G${c.gen}`,c.x,c.y+c.size+5);
+        ctx.restore();
+    }
+
+    // Labels for detected molecules
+    if(animFrame%30<15){
+        const comps=getAllComponents();
+        for(const comp of comps){
+            if(comp.length<2)continue;
+            const counts=countAtomsInComponent(comp);
+            const formula=formulaToString(counts);
+            const info=detectedMols.get(formula);
+            if(!info)continue;
+
+            // Calculate centroid
+            let cx=0,cy=0;
+            for(const a of comp){cx+=a.x;cy+=a.y;}
+            cx/=comp.length;cy/=comp.length;
+
+            ctx.fillStyle=info.color+'88';
+            ctx.font='7px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+            ctx.fillText(info.name,cx,cy-comp[0].r-6);
+        }
+    }
+
+    // Stats
+    document.getElementById('vAtom').textContent=atoms.length;
+    document.getElementById('vMol').textContent=detectedMols.size;
+    document.getElementById('vTypes').textContent=discoveryCount;
+    document.getElementById('vRxn').textContent=totalReactions;
+    document.getElementById('vCell').textContent=protocells.filter(c=>c.alive).length;
+    document.getElementById('vTemp').textContent=Math.round(temp);
+}
+
+// ═══════════════ 时代计算 ═══════════════
+function updateEra(){
+    let newEra=1;
+    for(const m of detectedMols.values()){
+        if(m.tier>=6)newEra=7;
+        else if(m.tier>=5)newEra=6;
+        else if(m.tier>=4)newEra=5;
+        else if(m.tier>=3)newEra=4;
+        else if(m.tier>=2)newEra=3;
+    }
+    if(protocells.length>0&&newEra<7)newEra=7;
+
+    if(newEra!==era){
+        era=newEra;
+        const n=ERA_NAMES[era]||'未知';
+        document.getElementById('eraDisplay').textContent=n;
+        if(era>=4)showMilestone(`🌍 Era ${era}: ${n}`,'化学复杂度达到了新的高度!');
+    }
+}
+
+// ═══════════════ UI更新 ═══════════════
+function updateMolList(){
+    document.getElementById('molCount').textContent=detectedMols.size;
+    const list=document.getElementById('molList');
+    list.innerHTML='';
+    const sorted=[...detectedMols.values()].sort((a,b)=>a.tier-b.tier||a.formula.localeCompare(b.formula));
+    for(const m of sorted.slice(-20)){
+        list.innerHTML+=`<div style="font-size:7px;color:${m.color};margin:1px 0;">${m.name} (${m.formula})</div>`;
+    }
+}
+
+function updateMSList(){
+    document.getElementById('msCount').textContent=milestones.size;
+    const list=document.getElementById('msList');
+    list.innerHTML='';
+    for(const m of milestones){
+        list.innerHTML+=`<div style="font-size:7px;color:var(--accent);">✅ ${m.slice(0,30)}</div>`;
+    }
+}
+
+let popTimeout=null;
+function showMilestone(title,desc){
+    document.getElementById('popTitle').textContent=title;
+    document.getElementById('popDesc').textContent=desc||'';
+    document.getElementById('popup').classList.add('show');
+    if(popTimeout)clearTimeout(popTimeout);
+    popTimeout=setTimeout(()=>document.getElementById('popup').classList.remove('show'),2500);
+}
+
+function addLog(msg){
+    const log=document.getElementById('logBox');
+    const t=new Date();
+    const time=`${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`;
+    log.innerHTML=`<div>[${time}] ${msg}</div>`+log.innerHTML;
+    if(log.children.length>25)log.removeChild(log.lastChild);
+}
+
+function updateCellStats(){
+    // no separate panel, cell count is shown in top bar
+}
+
+// ═══════════════ 控制 ═══════════════
+function resetSim(){
+    atoms=[];bonds=[];nextId=1;
+    totalReactions=0;detectedMols=new Map();milestones=new Set();
+    discoveryCount=0;protocells=[];era=1;
+    document.getElementById('eraDisplay').textContent='原子汤';
+    document.getElementById('molList').innerHTML='';
+    document.getElementById('msList').innerHTML='';
+    document.getElementById('molCount').textContent='0';
+    document.getElementById('msCount').textContent='0';
+    document.getElementById('logBox').innerHTML='<div style="color:#6b7280;">等待化学反应...</div>';
+    injectAtoms();
+}
+
+function injectAtoms(){
+    const pool=['H','C','N','O','Na','Mg','P','S','Cl','K','Ca','Fe','Si','Al'];
+    for(let i=0;i<10;i++){
+        const key=pool[Math.floor(Math.random()*pool.length)];
+        const x=30+Math.random()*(W-60),y=30+Math.random()*(H-60);
+        createAtom(x,y,key);
+    }
+    addLog('🧪 注入新原子');
+}
+
+function togglePause(){paused=!paused;document.getElementById('btnPause').textContent=paused?'▶':'⏸';}
+
+// UI bindings
+document.getElementById('cTemp').addEventListener('input',function(){
+    temp=parseInt(this.value);
+    document.getElementById('dTemp').textContent=temp+'°C';
+});
+document.getElementById('cDens').addEventListener('input',function(){
+    density=parseInt(this.value);
+    document.getElementById('dDens').textContent=density;
+});
+document.getElementById('cBind').addEventListener('input',function(){
+    bindChance=parseInt(this.value)/100;
+    document.getElementById('dBind').textContent=parseInt(this.value)+'%';
+});
+document.getElementById('cSpeed').addEventListener('input',function(){
+    speed=parseInt(this.value);
+    document.getElementById('dSpeed').textContent=speed+'x';
+});
+
+// Click to add atoms
+cv.addEventListener('click',(e)=>{
+    const r=cv.getBoundingClientRect();
+    const mx=e.clientX-r.left,my=e.clientY-r.top;
+    const pool=Math.random()<0.5?['H','C','N','O']:['H','C','N','O','P','S','Na','Cl','Mg','Ca','Fe','Si','Al'];
+    const key=pool[Math.floor(Math.random()*pool.length)];
+    createAtom(mx,my,key);
+});
+
+// Legend
+function buildLegend(){
+    const box=document.getElementById('legendBox');
+    for(const k of ELEM_KEYS){
+        const d=ELEMENTS[k];
+        box.innerHTML+=`<span><i style="background:${d.color};"></i>${d.sym}</span>`;
+    }
+}
+
+// ═══════════════ 主循环 ═══════════════
+function gameLoop(){
+    if(!paused){
+        for(let s=0;s<speed;s++){
+            update();
+            animFrame++;
+        }
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+buildLegend();
+injectAtoms();
+gameLoop();
+addLog('⚛ 模拟开始！原子们正在结合...');
+console.log(`化学进化模拟器 | ${ELEM_KEYS.length}种元素, ${MOLECULE_DB.length}种已知分子`);
+</script>
+</body>
+</html>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>AI挡球 - 终极聪明版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,sans-serif;touch-action:none;}
+.start-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#0a0e1a 0%,#1a1f2e 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:1000;}
+.start-screen.hidden{display:none;}
+.start-logo{font-size:48px;margin-bottom:10px;}
+.start-title{font-size:24px;font-weight:bold;color:#10b981;margin-bottom:8px;}
+.start-subtitle{font-size:13px;color:#9ca3af;margin-bottom:30px;text-align:center;line-height:1.6;}
+.start-form{width:100%;max-width:400px;}
+.start-group{margin-bottom:20px;}
+.start-label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:#9ca3af;}
+.start-value{color:#10b981;font-weight:bold;font-family:monospace;}
+.start-slider{width:100%;height:8px;background:#1f2937;border-radius:4px;outline:none;-webkit-appearance:none;}
+.start-slider::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;background:#10b981;border-radius:50%;cursor:pointer;box-shadow:0 2px 10px rgba(16,185,129,0.5);}
+.start-presets{display:flex;gap:8px;margin-top:10px;}
+.preset-btn{flex:1;padding:10px;background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:8px;font-size:12px;cursor:pointer;text-align:center;}
+.preset-btn.active{background:#10b981;color:#fff;border-color:#10b981;}
+.start-btn{width:100%;padding:16px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:20px;box-shadow:0 4px 20px rgba(16,185,129,0.3);}
+.start-btn:active{transform:scale(0.98);}
+.start-info{margin-top:20px;padding:12px;background:#1f2937;border-radius:8px;font-size:11px;color:#9ca3af;line-height:1.6;}
+.container{display:flex;flex-direction:column;height:100vh;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+.game-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;position:relative;}
+canvas{width:100%;max-width:600px;height:auto;aspect-ratio:3/2;background:#1a1f2e;border:2px solid #374151;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+.scoreboard{display:flex;justify-content:space-around;align-items:center;width:100%;max-width:600px;padding:12px 20px;background:rgba(17,24,39,0.9);border-radius:12px;margin-top:10px;backdrop-filter:blur(10px);}
+.score-item{text-align:center;padding:0 15px;}
+.score-label{font-size:11px;color:#9ca3af;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.score-value{font-size:32px;font-weight:bold;font-family:'Courier New',monospace;}
+.score-value.blue{color:#3b82f6;}
+.score-value.red{color:#ef4444;}
+.episode{text-align:center;padding:0 15px;border-left:1px solid #374151;border-right:1px solid #374151;}
+.episode-value{font-size:24px;font-weight:bold;color:#10b981;}
+.controls{display:flex;gap:8px;padding:12px;width:100%;max-width:600px;}
+.btn{flex:1;padding:14px 20px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;touch-action:manipulation;}
+.btn:active{transform:scale(0.95);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary{background:#10b981;color:#fff;}
+.btn-secondary{background:#374151;color:#fff;}
+.btn-danger{background:#ef4444;color:#fff;}
+.settings-panel{position:fixed;bottom:0;left:0;right:0;background:rgba(17,24,39,0.98);border-top:2px solid #374151;border-radius:20px 20px 0 0;padding:20px;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.3s ease;z-index:100;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+.settings-panel.show{transform:translateY(0);}
+.settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.settings-title{font-size:18px;font-weight:bold;color:#10b981;}
+.close-btn{width:36px;height:36px;border-radius:50%;background:#374151;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.setting-group{margin-bottom:20px;}
+.setting-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:14px;color:#9ca3af;}
+.setting-value{color:#10b981;font-weight:bold;font-family:monospace;}
+input[type=range]{width:100%;height:6px;background:#374151;border-radius:3px;outline:none;-webkit-appearance:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;background:#10b981;border-radius:50%;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.4);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.stat-card{background:#1f2937;padding:12px;border-radius:8px;text-align:center;}
+.stat-label{font-size:11px;color:#9ca3af;margin-bottom:4px;}
+.stat-value{font-size:18px;font-weight:bold;color:#e5e7eb;font-family:monospace;}
+.log-container{background:#0f1419;border:1px solid #374151;border-radius:8px;padding:10px;max-height:150px;overflow-y:auto;}
+.log-item{font-size:12px;padding:4px 0;border-bottom:1px solid #1f2937;font-family:monospace;}
+.log-item:last-child{border-bottom:none;}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:99;}
+.overlay.show{opacity:1;pointer-events:auto;}
+.settings-toggle{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;background:rgba(17,24,39,0.9);border:2px solid #374151;color:#10b981;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+.training-indicator{position:absolute;top:10px;left:10px;padding:6px 12px;background:rgba(16,185,129,0.2);border:1px solid #10b981;border-radius:20px;font-size:12px;color:#10b981;font-weight:600;display:none;align-items:center;gap:6px;z-index:10;}
+.training-indicator.show{display:flex;}
+.pulse{width:8px;height:8px;background:#10b981;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.pretrain-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(10,14,26,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;border-radius:12px;backdrop-filter:blur(5px);}
+.pretrain-overlay.hidden{display:none;}
+.pretrain-title{font-size:18px;font-weight:bold;color:#10b981;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.pretrain-spinner{width:20px;height:20px;border:3px solid #374151;border-top-color:#10b981;border-radius:50%;animation:spin 0.5s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pretrain-subtitle{font-size:12px;color:#9ca3af;margin-bottom:16px;}
+.pretrain-progress{width:80%;max-width:300px;height:8px;background:#1f2937;border-radius:4px;overflow:hidden;margin-bottom:8px;}
+.pretrain-bar{height:100%;background:linear-gradient(90deg,#10b981,#3b82f6);width:0%;transition:width 0.1s;border-radius:4px;}
+.pretrain-stats{font-size:11px;color:#9ca3af;font-family:monospace;margin-bottom:16px;text-align:center;line-height:1.6;}
+.pretrain-skip{padding:8px 20px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;}
+.pretrain-skip:active{transform:scale(0.95);}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:#1f2937;}
+::-webkit-scrollbar-thumb{background:#374151;border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="start-screen" id="startScreen">
+    <div class="start-logo">🧠</div>
+    <div class="start-title">AI 挡球 (终极版)</div>
+    <div class="start-subtitle">
+        330种状态空间 + 密集奖励引导<br>
+        AI 将学会预判轨迹和提前站位
+    </div>
+    <div class="start-form">
+        <div class="start-group">
+            <div class="start-label">
+                <span>🧠 预训练回合数</span>
+                <span class="start-value" id="startPretrainVal">5000</span>
+            </div>
+            <input type="range" class="start-slider" id="startPretrain" min="0" max="50000" step="1000" value="5000">
+            <div class="start-presets">
+                <div class="preset-btn" onclick="setPreset(0)">跳过</div>
+                <div class="preset-btn" onclick="setPreset(2000)">快速</div>
+                <div class="preset-btn active" onclick="setPreset(5000)">标准</div>
+                <div class="preset-btn" onclick="setPreset(20000)">大师</div>
+            </div>
+        </div>
+        <div class="start-group" id="loadGroup" style="display:none;">
+            <div class="start-label" style="justify-content:center;border-top:1px solid #374151;padding-top:16px;">
+                <span>💾 发现存档</span>
+            </div>
+            <div style="font-size:12px;color:#9ca3af;text-align:center;margin:8px 0;line-height:1.6;" id="saveInfo"></div>
+            <button class="start-btn" onclick="continueGame()" style="background:#3b82f6;margin-top:8px;">▶ 继续训练</button>
+            <button class="start-btn" onclick="deleteSaveAndRestart()" style="background:#ef4444;margin-top:8px;font-size:14px;">🗑 删除存档并重新训练</button>
+        </div>
+        <button class="start-btn" id="btnStartTrain" onclick="startGame()">▶ 开始训练</button>
+        <div class="start-info">
+            💡 <b>物理修正</b>：AI速度(6) > 球速(4)，确保能追上<br>
+            💡 <b>状态空间</b>：330种（包含球速方向和X距离）<br>
+            💡 <b>手机建议</b>：5000 回合（约 3-5 秒）<br>
+            💡 <b>电脑建议</b>：20000 回合（约 1-2 秒）
+        </div>
+    </div>
+</div>
+
+<div class="container" id="gameUI" style="display:none;">
+    <div class="game-container">
+        <canvas id="game"></canvas>
+        <div class="pretrain-overlay hidden" id="pretrainOverlay">
+            <div class="pretrain-title"><div class="pretrain-spinner"></div><span>AI 训练中</span></div>
+            <div class="pretrain-subtitle">正在学习预判和拦截...</div>
+            <div class="pretrain-progress"><div class="pretrain-bar" id="pretrainBar"></div></div>
+            <div class="pretrain-stats" id="pretrainStats">回合: 0 / 5000<br>比分: 0 : 0</div>
+            <button class="pretrain-skip" onclick="skipPretrain()">跳过 ▶</button>
+        </div>
+        <div class="training-indicator" id="trainingIndicator"><div class="pulse"></div><span>训练中</span></div>
+        <button class="settings-toggle" onclick="toggleSettings()">⚙️</button>
+        <div class="scoreboard">
+            <div class="score-item"><div class="score-label">🔵 蓝AI</div><div class="score-value blue" id="score1">0</div></div>
+            <div class="score-item episode"><div class="score-label">回合</div><div class="episode-value" id="episode">0</div></div>
+            <div class="score-item"><div class="score-label">🔴 红AI</div><div class="score-value red" id="score2">0</div></div>
+        </div>
+        <div class="controls">
+            <button class="btn btn-primary" id="btnTrain" onclick="toggleTraining()">⏸ 暂停</button>
+            <button class="btn btn-secondary" onclick="resetGame()">🔄 重置</button>
+            <button class="btn btn-secondary" onclick="saveAI()">💾 保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSettings()"></div>
+<div class="settings-panel" id="settingsPanel">
+    <div class="settings-header"><div class="settings-title">⚙️ 训练设置</div><button class="close-btn" onclick="toggleSettings()">✕</button></div>
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">蓝AI探索率</div><div class="stat-value" id="mEps1">0.50</div></div>
+        <div class="stat-card"><div class="stat-label">红AI探索率</div><div class="stat-value" id="mEps2">0.50</div></div>
+        <div class="stat-card"><div class="stat-label">蓝AI Q表</div><div class="stat-value" id="mQ1">0</div></div>
+        <div class="stat-card"><div class="stat-label">红AI Q表</div><div class="stat-value" id="mQ2">0</div></div>
+    </div>
+    <div class="setting-group"><div class="setting-label"><span>训练速度</span><span class="setting-value" id="vSpeed">5x</span></div><input type="range" id="speed" min="1" max="50" step="1" value="5"></div>
+    <button class="btn btn-danger" onclick="resetAI()">🧠 重置AI学习</button>
+    <div class="log-container" id="log"></div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() {
+    const container = canvas.parentElement;
+    const maxWidth = Math.min(container.clientWidth - 20, 600);
+    canvas.width = maxWidth;
+    canvas.height = maxWidth * 2 / 3;
+}
+const W = () => canvas.width;
+const H = () => canvas.height;
+
+// 【核心修正】AI速度(6) 必须大于 球速(4)，否则物理上追不上
+const CONFIG = {
+    aiRadius: 25, ballRadius: 10,
+    aiSpeed: 6, ballSpeed: 4, 
+    goalWidth: 100,
+    alpha: 0.2, gamma: 0.95, epsilon: 0.5, speed: 5,
+    pretrainEpisodes: 5000
+};
+
+let game = {
+    ai1: { x: 0, y: 0, score: 0, color: '#3b82f6' },
+    ai2: { x: 0, y: 0, score: 0, color: '#ef4444' },
+    ball: { x: 0, y: 0, vx: 0, vy: 0 },
+    episode: 0, training: true, stepCount: 0,
+    lastScorer: null, pretraining: false, pretrainTarget: 0
+};
+
+function initPositions() {
+    game.ai1.x = W() * 0.15; game.ai1.y = H() / 2;
+    game.ai2.x = W() * 0.85; game.ai2.y = H() / 2;
+}
+
+class QLearningAI {
+    constructor(id) {
+        this.id = id;
+        this.qTable = {};
+        this.epsilon = CONFIG.epsilon;
+        this.lastState = null;
+        this.lastAction = null;
+        this.lastReward = 0;
+    }
+
+    // 【黄金状态空间】330种状态，包含预判信息
+    getState(ai, ball) {
+        // 1. Y相对位置 (11种: -5 到 5)
+        let dy = ball.y - ai.y;
+        let yZone = Math.max(-5, Math.min(5, Math.round(dy / 30)));
+        
+        // 2. X相对距离 (5种: 0到4)
+        let dx = Math.abs(ball.x - ai.x);
+        let xZone = Math.min(4, Math.floor(dx / 80)); 
+        
+        // 3. 球是否朝我飞来 (2种)
+        let coming = 0;
+        if (this.id === 1 && ball.vx < -0.5) coming = 1;
+        if (this.id === 2 && ball.vx > 0.5) coming = 1;
+        
+        // 4. 球的Y速度方向 (3种: 向上, 平行, 向下) -> 帮助预判反弹
+        let vyDir = 1; 
+        if (ball.vy < -0.5) vyDir = 0; 
+        if (ball.vy > 0.5) vyDir = 2; 
+
+        // 总状态: 11 * 5 * 2 * 3 = 330 种
+        return `${yZone},${xZone},${coming},${vyDir}`;
+    }
+
+    getQ(state, action) {
+        if (!this.qTable[state]) this.qTable[state] = {};
+        if (this.qTable[state][action] === undefined) this.qTable[state][action] = 0;
+        return this.qTable[state][action];
+    }
+
+    chooseAction(state) {
+        if (Math.random() < this.epsilon) return Math.floor(Math.random() * 9);
+        let bestAction = 0, bestQ = -Infinity;
+        for (let a = 0; a < 9; a++) {
+            const q = this.getQ(state, a);
+            if (q > bestQ) { bestQ = q; bestAction = a; }
+        }
+        return bestAction;
+    }
+
+    executeAction(action, ai) {
+        const d = CONFIG.aiSpeed;
+        const diag = d * 0.7071;
+        switch(action) {
+            case 0: ai.y -= d; break;
+            case 1: ai.y += d; break;
+            case 2: ai.x -= d; break;
+            case 3: ai.x += d; break;
+            case 4: ai.x -= diag; ai.y -= diag; break;
+            case 5: ai.x += diag; ai.y -= diag; break;
+            case 6: ai.x -= diag; ai.y += diag; break;
+            case 7: ai.x += diag; ai.y += diag; break;
+        }
+        const m = CONFIG.aiRadius;
+        if (this.id === 1) ai.x = Math.max(m, Math.min(W()/2 - m, ai.x));
+        else ai.x = Math.max(W()/2 + m, Math.min(W() - m, ai.x));
+        ai.y = Math.max(m, Math.min(H() - m, ai.y));
+    }
+
+    learn(state, action, reward, nextState) {
+        if (this.lastState !== null) {
+            const oldQ = this.getQ(this.lastState, this.lastAction);
+            const maxNextQ = Math.max(...[0,1,2,3,4,5,6,7,8].map(a => this.getQ(state, a)));
+            this.qTable[this.lastState][this.lastAction] = oldQ + CONFIG.alpha * (this.lastReward + CONFIG.gamma * maxNextQ - oldQ);
+        }
+        this.lastState = state; this.lastAction = action; this.lastReward = reward;
+    }
+
+    finalLearn(reward) {
+        if (this.lastState !== null) {
+            const oldQ = this.getQ(this.lastState, this.lastAction);
+            this.qTable[this.lastState][this.lastAction] = oldQ + CONFIG.alpha * (reward - oldQ);
+        }
+        this.lastState = null; this.lastAction = null;
+    }
+
+    decayEpsilon() { this.epsilon = Math.max(0.05, this.epsilon * 0.9999); }
+}
+
+const ai1 = new QLearningAI(1);
+const ai2 = new QLearningAI(2);
+const SAVE_KEY = 'ai_pong_v2';
+
+function saveAI() {
+    try {
+        const data = {
+            q1: ai1.qTable, q2: ai2.qTable,
+            eps1: ai1.epsilon, eps2: ai2.epsilon,
+            ep: game.episode
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        addLog('💾 已保存');
+    } catch(e) { addLog('⚠️ 保存失败'); }
+}
+
+function loadAI() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        ai1.qTable = data.q1 || {};
+        ai2.qTable = data.q2 || {};
+        ai1.epsilon = data.eps1 ?? CONFIG.epsilon;
+        ai2.epsilon = data.eps2 ?? CONFIG.epsilon;
+        game.episode = data.ep || 0;
+        return true;
+    } catch(e) { return false; }
+}
+
+function hasSave() { return localStorage.getItem(SAVE_KEY) !== null; }
+function deleteSave() { localStorage.removeItem(SAVE_KEY); }
+
+function resetBall(towardsPlayer = null) {
+    game.ball.x = W() / 2; game.ball.y = H() / 2;
+    let angle = Math.random() * Math.PI * 2;
+    if (towardsPlayer === 1) angle = Math.PI + (Math.random() - 0.5) * 0.8;
+    else if (towardsPlayer === 2) angle = (Math.random() - 0.5) * 0.8;
+    game.ball.vx = Math.cos(angle) * CONFIG.ballSpeed;
+    game.ball.vy = Math.sin(angle) * CONFIG.ballSpeed;
+    game.stepCount = 0;
+}
+
+function checkCollision() {
+    const ball = game.ball;
+    const goalTop = H() / 2 - CONFIG.goalWidth / 2;
+    const goalBottom = H() / 2 + CONFIG.goalWidth / 2;
+    
+    for (const { obj, id } of [{obj:game.ai1,id:'ai1'},{obj:game.ai2,id:'ai2'}]) {
+        const dx = ball.x - obj.x, dy = ball.y - obj.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = CONFIG.aiRadius + CONFIG.ballRadius;
+        if (dist < minDist && dist > 0) {
+            const angle = Math.atan2(dy, dx);
+            ball.vx = Math.cos(angle) * CONFIG.ballSpeed;
+            ball.vy = Math.sin(angle) * CONFIG.ballSpeed;
+            const overlap = minDist - dist;
+            ball.x += Math.cos(angle) * (overlap + 1);
+            ball.y += Math.sin(angle) * (overlap + 1);
+            return id;
+        }
+    }
+    
+    if (ball.x + CONFIG.ballRadius < 0) {
+        if (ball.y > goalTop && ball.y < goalBottom) return 'goal2';
+        ball.x = CONFIG.ballRadius; ball.vx = Math.abs(ball.vx); return null;
+    }
+    if (ball.x - CONFIG.ballRadius > W()) {
+        if (ball.y > goalTop && ball.y < goalBottom) return 'goal1';
+        ball.x = W() - CONFIG.ballRadius; ball.vx = -Math.abs(ball.vx); return null;
+    }
+    if (ball.y - CONFIG.ballRadius < 0) { ball.y = CONFIG.ballRadius; ball.vy = Math.abs(ball.vy); }
+    if (ball.y + CONFIG.ballRadius > H()) { ball.y = H() - CONFIG.ballRadius; ball.vy = -Math.abs(ball.vy); }
+    if (ball.x < -50 || ball.x > W() + 50 || ball.y < -50 || ball.y > H() + 50) { resetBall(); return null; }
+    return null;
+}
+
+function updateOnce() {
+    const state1 = ai1.getState(game.ai1, game.ball);
+    const state2 = ai2.getState(game.ai2, game.ball);
+    const action1 = ai1.chooseAction(state1);
+    const action2 = ai2.chooseAction(state2);
+    
+    ai1.executeAction(action1, game.ai1);
+    ai2.executeAction(action2, game.ai2);
+    
+    game.ball.x += game.ball.vx;
+    game.ball.y += game.ball.vy;
+    
+    const collision = checkCollision();
+    let reward1 = 0, reward2 = 0;
+    let episodeEnd = false;
+    
+    // 【密集奖励】每帧根据Y距离给奖励（降低权重，减少"不动"惰性）
+    const dy1 = Math.abs(game.ai1.y - game.ball.y);
+    const dy2 = Math.abs(game.ai2.y - game.ball.y);
+    reward1 += (1 - dy1 / H()) * 0.03;
+    reward2 += (1 - dy2 / H()) * 0.03;
+
+    // 如果球朝我飞来，且我很接近球的Y，给额外奖励（鼓励拦截）
+    if (game.ball.vx < 0 && dy1 < 40) reward1 += 0.3;
+    if (game.ball.vx > 0 && dy2 < 40) reward2 += 0.3;
+
+    // 鼓励向球的Y方向移动（减少惰性）
+    const prevDy1 = game.ai1._prevDy ?? dy1;
+    const prevDy2 = game.ai2._prevDy ?? dy2;
+    if (dy1 < prevDy1) reward1 += 0.1;
+    if (dy2 < prevDy2) reward2 += 0.1;
+    game.ai1._prevDy = dy1;
+    game.ai2._prevDy = dy2;
+
+    if (collision === 'goal1') {
+        game.ai1.score++; reward1 = 10; reward2 = -10;
+        episodeEnd = true; game.lastScorer = 1;
+    } else if (collision === 'goal2') {
+        game.ai2.score++; reward1 = -10; reward2 = 10;
+        episodeEnd = true; game.lastScorer = 2;
+    } else if (collision === 'ai1') {
+        reward1 += 2.0; reward2 -= 0.5; // 挡球大奖励
+    } else if (collision === 'ai2') {
+        reward1 -= 0.5; reward2 += 2.0;
+    }
+    
+    const nextState1 = ai1.getState(game.ai1, game.ball);
+    const nextState2 = ai2.getState(game.ai2, game.ball);
+    ai1.learn(state1, action1, reward1, nextState1);
+    ai2.learn(state2, action2, reward2, nextState2);
+    
+    if (episodeEnd) {
+        ai1.finalLearn(reward1); ai2.finalLearn(reward2);
+        game.episode++;
+        ai1.decayEpsilon(); ai2.decayEpsilon();
+        if (game.episode % 100 === 0) saveAI();
+        initPositions();
+        resetBall(game.lastScorer === 1 ? 2 : 1);
+    }
+    
+    game.stepCount++;
+    if (game.stepCount > 800) { // 超时平局
+        game.episode++;
+        ai1.decayEpsilon(); ai2.decayEpsilon();
+        resetBall(); initPositions();
+    }
+}
+
+function updateDisplay() {
+    document.getElementById('score1').textContent = game.ai1.score;
+    document.getElementById('score2').textContent = game.ai2.score;
+    document.getElementById('episode').textContent = game.episode;
+}
+
+let pretrainSkip = false;
+function runPretrain() {
+    const batchSize = /Mobi|Android/i.test(navigator.userAgent) ? 800 : 3000;
+    function runBatch() {
+        if (pretrainSkip) { finishPretrain(); return; }
+        const startTime = performance.now();
+        for (let i = 0; i < batchSize; i++) {
+            updateOnce();
+            if (game.episode >= game.pretrainTarget) { finishPretrain(); return; }
+        }
+        updatePretrainUI();
+        setTimeout(runBatch, performance.now() - startTime < 16 ? 0 : 4);
+    }
+    runBatch();
+}
+
+function updatePretrainUI() {
+    const progress = Math.min(100, (game.episode / game.pretrainTarget) * 100);
+    document.getElementById('pretrainBar').style.width = progress + '%';
+    document.getElementById('pretrainStats').innerHTML = 
+        `回合: ${game.episode} / ${game.pretrainTarget}<br>比分: ${game.ai1.score} : ${game.ai2.score}<br>Q表: ${Object.keys(ai1.qTable).length + Object.keys(ai2.qTable).length} 条`;
+}
+
+function finishPretrain() {
+    game.pretraining = false;
+    document.getElementById('pretrainOverlay').classList.add('hidden');
+    game.ai1.score = 0; game.ai2.score = 0; game.episode = 0;
+    initPositions(); resetBall(); updateDisplay(); draw();
+    addLog(`✅ 预训练完成！AI已掌握拦截技巧`);
+    addLog(`💡 蓝AI Q表: ${Object.keys(ai1.qTable).length} / 330`);
+    addLog(`💡 红AI Q表: ${Object.keys(ai2.qTable).length} / 330`);
+    game.training = true;
+    document.getElementById('btnTrain').textContent = '⏸ 暂停';
+    document.getElementById('btnTrain').classList.replace('btn-primary', 'btn-secondary');
+    document.getElementById('trainingIndicator').classList.add('show');
+    saveAI();
+}
+
+function skipPretrain() { pretrainSkip = true; }
+
+function draw() {
+    ctx.clearRect(0, 0, W(), H());
+    const goalTop = H() / 2 - CONFIG.goalWidth / 2;
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+    ctx.fillRect(0, goalTop, 5, CONFIG.goalWidth);
+    ctx.fillRect(W() - 5, goalTop, 5, CONFIG.goalWidth);
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(0, goalTop); ctx.lineTo(0, goalTop + CONFIG.goalWidth);
+    ctx.moveTo(W(), goalTop); ctx.lineTo(W(), goalTop + CONFIG.goalWidth); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 2; ctx.setLineDash([10, 10]);
+    ctx.beginPath(); ctx.moveTo(W()/2, 0); ctx.lineTo(W()/2, H()); ctx.stroke(); ctx.setLineDash([]);
+    
+    for (const ai of [game.ai1, game.ai2]) {
+        ctx.fillStyle = ai.color; ctx.beginPath(); ctx.arc(ai.x, ai.y, CONFIG.aiRadius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(game.ball.x, game.ball.y, CONFIG.ballRadius, 0, Math.PI * 2); ctx.fill();
+}
+
+function gameLoop() {
+    if (!game.pretraining) {
+        if (game.training) for (let i = 0; i < CONFIG.speed; i++) updateOnce();
+        draw(); updateDisplay();
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+function toggleTraining() {
+    game.training = !game.training;
+    const btn = document.getElementById('btnTrain');
+    const ind = document.getElementById('trainingIndicator');
+    if (game.training) { btn.textContent = '⏸ 暂停'; btn.classList.replace('btn-primary', 'btn-secondary'); ind.classList.add('show'); }
+    else { btn.textContent = '▶ 继续'; btn.classList.replace('btn-secondary', 'btn-primary'); ind.classList.remove('show'); }
+}
+function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('show'); document.getElementById('overlay').classList.toggle('show'); }
+function resetGame() { game.ai1.score = 0; game.ai2.score = 0; game.episode = 0; initPositions(); resetBall(); updateDisplay(); draw(); addLog('🔄 重置比分'); }
+function resetAI() { 
+    ai1.qTable = {}; ai1.epsilon = 0.5; ai1.lastState = null; ai1.lastAction = null;
+    ai2.qTable = {}; ai2.epsilon = 0.5; ai2.lastState = null; ai2.lastAction = null;
+    deleteSave();
+    addLog('🧠 AI已清空，变回傻子'); toggleSettings(); 
+}
+function addLog(msg) {
+    const log = document.getElementById('log');
+    log.innerHTML = `<div class="log-item">[${new Date().toLocaleTimeString()}] ${msg}</div>` + log.innerHTML;
+    if (log.children.length > 20) log.removeChild(log.lastChild);
+}
+
+// 检查存档
+if (hasSave()) {
+    const raw = localStorage.getItem(SAVE_KEY);
+    const data = JSON.parse(raw);
+    const qSize = Object.keys(data.q1 || {}).length + Object.keys(data.q2 || {}).length;
+    document.getElementById('saveInfo').textContent = `已训练 ${data.ep || 0} 回合，Q表 ${qSize} 条`;
+    document.getElementById('loadGroup').style.display = 'block';
+    document.getElementById('btnStartTrain').textContent = '🔄 重新训练';
+}
+
+document.getElementById('startPretrain').addEventListener('input', function() {
+    CONFIG.pretrainEpisodes = parseInt(this.value);
+    document.getElementById('startPretrainVal').textContent = this.value;
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+});
+function setPreset(val) {
+    CONFIG.pretrainEpisodes = val;
+    document.getElementById('startPretrain').value = val;
+    document.getElementById('startPretrainVal').textContent = val;
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if ((btn.textContent === '跳过' && val === 0) || parseInt(btn.textContent.replace('快速','2000').replace('标准','5000').replace('大师','20000')) === val) btn.classList.add('active');
+    });
+}
+document.getElementById('speed').addEventListener('input', function() { CONFIG.speed = parseInt(this.value); document.getElementById('vSpeed').textContent = this.value + 'x'; });
+
+function startGame(skipPretrain) {
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameUI').style.display = 'flex';
+    if (skipPretrain) {
+        loadAI();
+        addLog(`🎮 加载存档，继续训练 (Q表 ${Object.keys(ai1.qTable).length + Object.keys(ai2.qTable).length} 条)`);
+        finishPretrain();
+    } else {
+        resizeCanvas(); initPositions(); resetBall();
+        addLog('🎮 启动终极版 (330状态+密集奖励)');
+        if (CONFIG.pretrainEpisodes > 0) {
+            game.pretraining = true; game.pretrainTarget = CONFIG.pretrainEpisodes;
+            document.getElementById('pretrainOverlay').classList.remove('hidden');
+            addLog(`🧠 预训练 ${CONFIG.pretrainEpisodes} 回合...`);
+            runPretrain();
+        } else { finishPretrain(); }
+    }
+    requestAnimationFrame(gameLoop);
+    setInterval(() => {
+        document.getElementById('mEps1').textContent = ai1.epsilon.toFixed(2);
+        document.getElementById('mEps2').textContent = ai2.epsilon.toFixed(2);
+        document.getElementById('mQ1').textContent = Object.keys(ai1.qTable).length;
+        document.getElementById('mQ2').textContent = Object.keys(ai2.qTable).length;
+    }, 500);
+}
+
+function continueGame() { startGame(true); }
+
+function deleteSaveAndRestart() {
+    deleteSave();
+    document.getElementById('loadGroup').style.display = 'none';
+    document.getElementById('btnStartTrain').textContent = '▶ 开始训练';
+    addLog('🗑 存档已删除');
+    startGame(false);
+}
+window.addEventListener('resize', () => { if(!game.pretraining) { resizeCanvas(); initPositions(); } });
+</script>
+</body>
+</html>

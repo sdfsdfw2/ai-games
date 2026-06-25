@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神经网络进化模拟器 v2</title>
+    <style>
+        :root { --bg:#070a12; --panel:#111827; --text:#e5e7eb; --accent:#10b981; --border:#1e293b; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:"Microsoft YaHei",system-ui,sans-serif; }
+
+        .layout {
+            display:grid;
+            grid-template-columns:1fr 300px;
+            grid-template-rows:auto 1fr 90px;
+            height:100vh;
+            gap:0;
+        }
+
+        /* 顶栏 */
+        .topbar {
+            grid-column:1/-1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:20px;
+            padding:8px 16px;
+            background:var(--panel);
+            border-bottom:1px solid var(--border);
+        }
+        .topbar h1 { font-size:16px; color:var(--accent); letter-spacing:2px; margin-right:20px; white-space:nowrap; }
+        .stat { text-align:center; font-family:monospace; min-width:60px; }
+        .stat-lbl { font-size:11px; color:#6b7280; }
+        .stat-val { font-size:18px; font-weight:bold; }
+
+        /* 画布区 */
+        .canvas-area {
+            position:relative;
+            overflow:hidden;
+            background:#020617;
+        }
+        canvas#evoCanvas { display:block; width:100%; height:100%; cursor:crosshair; background:#020617; }
+
+        /* 右侧面板 */
+        .sidebar {
+            background:var(--panel);
+            border-left:1px solid var(--border);
+            overflow-y:auto;
+            padding:12px 14px;
+        }
+        .sidebar h3 {
+            font-size:13px; color:var(--accent); margin:10px 0 6px;
+            padding-bottom:4px; border-bottom:1px solid var(--border);
+        }
+        .sidebar h3:first-child { margin-top:0; }
+
+        .param-row {
+            display:flex; align-items:center; justify-content:space-between;
+            margin:4px 0; font-size:13px; line-height:2;
+        }
+        .param-row label { color:#9ca3af; flex:1; }
+        .param-row input[type=range] { width:100px; accent-color:var(--accent); height:16px; }
+        .param-row span { width:36px; text-align:right; font-family:monospace; font-size:12px; color:var(--text); }
+
+        .btn-row { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0; }
+        button {
+            background:var(--accent); color:#fff; border:none; padding:6px 14px;
+            border-radius:5px; cursor:pointer; font-weight:600; font-size:12px; transition:all 0.15s;
+        }
+        button:hover { filter:brightness(1.15); }
+        .btn-sm { padding:4px 10px; font-size:11px; }
+        .btn-ghost { background:var(--panel); color:var(--text); border:1px solid var(--border); }
+        .btn-ghost.active { background:#8b5cf6; border-color:#7c3aed; color:#fff; }
+        .btn-danger { background:#ef4444; }
+
+        .nn-box { background:#060a14; border:1px solid var(--border); border-radius:6px; padding:6px; margin:6px 0; }
+        .info-txt { font-size:11px; color:#9ca3af; font-family:monospace; line-height:1.5; margin:3px 0; }
+
+        /* 底部图表 */
+        .bottombar {
+            grid-column:1/-1;
+            background:var(--panel);
+            border-top:1px solid var(--border);
+            padding:6px 16px;
+            display:flex;
+            align-items:center;
+            gap:12px;
+        }
+        .bottombar .chart-wrap { flex:1; }
+        .bottombar h3 { font-size:11px; color:#6b7280; margin-bottom:2px; }
+        .bottombar canvas { display:block; width:100%; height:64px; }
+        .legend { display:flex; gap:12px; align-items:center; flex-shrink:0; }
+        .legend span { font-size:11px; color:#9ca3af; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+        .legend i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+        ::-webkit-scrollbar { width:5px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#374151; border-radius:3px; }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <!-- 顶栏 -->
+    <div class="topbar">
+        <h1>神经网络进化试炼场</h1>
+        <div class="stat"><div class="stat-lbl">世代</div><div class="stat-val" id="val-gen" style="color:#3b82f6;">1</div></div>
+        <div class="stat"><div class="stat-lbl">最高分</div><div class="stat-val" id="val-best" style="color:#10b981;">0</div></div>
+        <div class="stat"><div class="stat-lbl">存活</div><div class="stat-val" id="val-alive" style="color:#fbbf24;">0/0</div></div>
+        <div class="stat"><div class="stat-lbl">变异率</div><div class="stat-val" id="val-mut" style="color:#f87171;">15%</div></div>
+        <div class="stat"><div class="stat-lbl">计时</div><div class="stat-val" id="val-time" style="color:#a78bfa;">0</div></div>
+        <div class="stat"><div class="stat-lbl">食物</div><div class="stat-val" id="val-food" style="color:#10b981;">0</div></div>
+        <div class="stat"><div class="stat-lbl">毒药</div><div class="stat-val" id="val-poison" style="color:#ef4444;">0</div></div>
+    </div>
+
+    <!-- 画布 -->
+    <div class="canvas-area">
+        <canvas id="evoCanvas"></canvas>
+    </div>
+
+    <!-- 右侧设置面板 -->
+    <div class="sidebar">
+        <h3>环境参数</h3>
+        <div class="param-row"><label>种群数量</label><input type="range" id="p-pop" min="10" max="80" value="30"><span id="v-pop">30</span></div>
+        <div class="param-row"><label>食物数量</label><input type="range" id="p-food" min="10" max="100" value="50"><span id="v-food">50</span></div>
+        <div class="param-row"><label>毒药数量</label><input type="range" id="p-poison" min="5" max="80" value="35"><span id="v-poison">35</span></div>
+        <div class="param-row"><label>障碍物</label><input type="range" id="p-obs" min="0" max="10" value="3"><span id="v-obs">3</span></div>
+        <div class="param-row"><label>世代时长</label><input type="range" id="p-epoch" min="200" max="2000" value="800" step="100"><span id="v-epoch">800</span></div>
+
+        <h3>进化参数</h3>
+        <div class="param-row"><label>变异率</label><input type="range" id="p-mut" min="5" max="50" value="15"><span id="v-mut">15%</span></div>
+        <div class="param-row"><label>精英保留</label><input type="range" id="p-elite" min="0" max="30" value="10"><span id="v-elite">10%</span></div>
+        <div class="param-row"><label>锦标赛K</label><input type="range" id="p-tourn" min="2" max="8" value="3"><span id="v-tourn">3</span></div>
+        <div class="param-row"><label>隐藏神经元</label><input type="range" id="p-hidden" min="4" max="16" value="8"><span id="v-hidden">8</span></div>
+
+        <h3>行为参数</h3>
+        <div class="param-row"><label>蜂群强度</label><input type="range" id="p-flock" min="0" max="100" value="30"><span id="v-flock">30%</span></div>
+
+        <h3>模拟速度</h3>
+        <div class="btn-row">
+            <button class="btn-sm btn-ghost" data-speed="1">1x</button>
+            <button class="btn-sm btn-ghost active" data-speed="2">2x</button>
+            <button class="btn-sm btn-ghost" data-speed="4">4x</button>
+            <button class="btn-sm btn-ghost" data-speed="8">8x</button>
+            <button class="btn-sm btn-ghost" data-speed="15">15x</button>
+        </div>
+
+        <h3>点击模式</h3>
+        <div class="btn-row">
+            <button class="btn-sm btn-ghost active" data-mode="food">+食物</button>
+            <button class="btn-sm btn-ghost" data-mode="poison">+毒药</button>
+            <button class="btn-sm btn-ghost" data-mode="select">选择</button>
+            <button class="btn-sm btn-ghost" data-mode="control">操控</button>
+        </div>
+
+        <h3>选中生物</h3>
+        <div id="sel-info" class="info-txt">点击生物查看详情</div>
+        <div class="nn-box"><canvas id="nnCanvas" width="268" height="130"></canvas></div>
+        <div class="info-txt" id="sel-lineage"></div>
+
+        <h3>操作</h3>
+        <div class="btn-row">
+            <button onclick="nextGeneration()">强制造代</button>
+            <button onclick="initSimulation()" class="btn-danger">重置全部</button>
+        </div>
+    </div>
+
+    <!-- 底部图表+图例 -->
+    <div class="bottombar">
+        <div class="chart-wrap">
+            <h3>适应度趋势</h3>
+            <canvas id="chartCanvas"></canvas>
+        </div>
+        <div class="legend">
+            <span><i style="background:#10b981;"></i>食物</span>
+            <span><i style="background:#fbbf24;"></i>稀有食物</span>
+            <span><i style="background:#3b82f6;"></i>加速道具</span>
+            <span><i style="background:#ef4444;"></i>毒药</span>
+            <span><i style="background:#4b5563;"></i>障碍物</span>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('evoCanvas');
+const ctx = canvas.getContext('2d');
+const nnCanvas = document.getElementById('nnCanvas');
+const nnCtx = nnCanvas.getContext('2d');
+const chartCanvas = document.getElementById('chartCanvas');
+const chartCtx = chartCanvas.getContext('2d');
+
+const W = 960, H = 560;
+let dpr = window.devicePixelRatio || 1;
+
+function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let CFG = {
+    popSize:30, foodCount:50, poisonCount:35, obstacles:3,
+    baseMutRate:0.15, elitePercent:0.1, tournamentK:3,
+    hiddenNeurons:8, flockStrength:0.3, simSpeed:2,
+    maxEpoch:800, foodRespawnRate:0.3, poisonRespawnRate:0.2
+};
+
+let creatures=[], foods=[], poisons=[], obstacles=[], speedBoosts=[], goldFoods=[];
+let generation=1, highestFitness=0, epochTimer=0;
+let fitnessHistory=[];
+let selectedCreature=null, clickMode='food', mouseX=0, mouseY=0;
+let controlledCreature=null;
+
+const INPUT_SIZE=14, OUTPUT_SIZE=2;
+
+class NeuralNetwork {
+    constructor(hiddenSize=CFG.hiddenNeurons, weights=null) {
+        this.inputSize=INPUT_SIZE; this.hiddenSize=hiddenSize; this.outputSize=OUTPUT_SIZE;
+        this.prevOutput=[0,0];
+        if(weights){this.weights=JSON.parse(JSON.stringify(weights));}
+        else{this.weights=[];const t=this.inputSize*this.hiddenSize+this.hiddenSize*this.outputSize;for(let i=0;i<t;i++)this.weights.push(Math.random()*2-1);}
+    }
+    getWC(){return{w1:this.inputSize*this.hiddenSize,w2:this.hiddenSize*this.outputSize};}
+    predict(inputs){
+        const wc=this.getWC();let hidden=[];
+        for(let h=0;h<this.hiddenSize;h++){let s=0;for(let i=0;i<this.inputSize;i++)s+=inputs[i]*this.weights[h*this.inputSize+i];hidden.push(Math.tanh(s));}
+        let outputs=[];
+        for(let o=0;o<this.outputSize;o++){let s=0;for(let h=0;h<this.hiddenSize;h++)s+=hidden[h]*this.weights[wc.w1+o*this.hiddenSize+h];outputs.push(Math.tanh(s));}
+        this.prevOutput=outputs;this.lastHidden=hidden;return outputs;
+    }
+    mutate(rate){for(let i=0;i<this.weights.length;i++){if(Math.random()<rate){this.weights[i]+=(Math.random()*2-1)*0.3;if(this.weights[i]>2)this.weights[i]=2;if(this.weights[i]<-2)this.weights[i]=-2;}}}
+    deepCopy(){return new NeuralNetwork(this.hiddenSize,this.weights);}
+}
+
+class Creature {
+    constructor(x,y,brain=null){
+        this.x=x;this.y=y;this.angle=Math.random()*Math.PI*2;
+        this.alive=true;this.health=1.0;this.energy=0.5;this.fitness=0;
+        this.radius=6;this.speed=0;this.turnRate=0;
+        this.hue=Math.random()*360;this.color=`hsl(${this.hue},80%,60%)`;
+        this.brain=brain||new NeuralNetwork();
+        this.generation=generation;this.parentId=null;
+        this.id=Math.random().toString(36).substr(2,6);
+        this.foodEaten=0;this.poisonEaten=0;this.timeAlive=0;
+        this.closestFoodAngle=0;this.closestPoisonAngle=0;
+        this.perceptionRadius=150;this.memory=[0,0];
+    }
+    sense(list){
+        let best=null,bestDist=Infinity;
+        for(const item of list){const dx=item.x-this.x,dy=item.y-this.y,d=Math.sqrt(dx*dx+dy*dy);if(d<bestDist&&d<this.perceptionRadius){bestDist=d;best=item;}}
+        if(best){const des=Math.atan2(best.y-this.y,best.x-this.x);let diff=des-this.angle;diff=Math.atan2(Math.sin(diff),Math.cos(diff));return{dist:bestDist/this.perceptionRadius,angle:diff};}
+        return{dist:1.0,angle:0};
+    }
+    senseWalls(){const m=50;return[Math.min(1,this.x/m),Math.min(1,(W-this.x)/m),Math.min(1,this.y/m),Math.min(1,(H-this.y)/m)];}
+    senseObstacles(){
+        let closest=null,closestDist=Infinity;
+        for(const obs of obstacles){const dx=obs.x-this.x,dy=obs.y-this.y,d=Math.sqrt(dx*dx+dy*dy)-obs.r;if(d<closestDist){closestDist=d;closest=obs;}}
+        if(closest&&closestDist<this.perceptionRadius*1.5){const des=Math.atan2(closest.y-this.y,closest.x-this.x);let diff=des-this.angle;diff=Math.atan2(Math.sin(diff),Math.cos(diff));return[closestDist/(this.perceptionRadius*1.5),diff];}
+        return[1.0,0];
+    }
+    senseCrowd(){
+        let count=0,avgAngle=0,sepX=0,sepY=0;
+        for(const c of creatures){if(c===this||!c.alive)continue;const dx=c.x-this.x,dy=c.y-this.y,d=Math.sqrt(dx*dx+dy*dy);if(d<60){count++;avgAngle+=c.angle;if(d<20){sepX-=dx/d;sepY-=dy/d;}}}
+        if(count>0)avgAngle/=count;
+        return[Math.min(1,count/5),avgAngle,sepX,sepY];
+    }
+    flock(){
+        if(CFG.flockStrength<=0)return;
+        let cohX=0,cohY=0,aliAngle=0,sepX=0,sepY=0,n=0;
+        for(const c of creatures){if(c===this||!c.alive)continue;const dx=c.x-this.x,dy=c.y-this.y,d=Math.sqrt(dx*dx+dy*dy);if(d<80){cohX+=c.x;cohY+=c.y;aliAngle+=c.angle;n++;if(d<25){sepX-=dx/(d+1);sepY-=dy/(d+1);}}}
+        if(n>0){cohX=cohX/n-this.x;cohY=cohY/n-this.y;aliAngle/=n;let ad=aliAngle-this.angle;ad=Math.atan2(Math.sin(ad),Math.cos(ad));const s=CFG.flockStrength*0.01;this.angle+=Math.atan2(cohY,cohX)*s*0.3+ad*s*0.2+Math.atan2(sepY,sepX)*s*0.5;}
+    }
+    update(){
+        if(!this.alive)return;
+        this.timeAlive++;
+        this.health-=0.0012;this.energy=Math.max(0,this.energy-0.0005);
+        if(this.health<=0||this.energy<=0){this.alive=false;return;}
+
+        const fInfo=this.sense(foods),pInfo=this.sense(poisons),oInfo=this.senseObstacles();
+        const wallInfo=this.senseWalls(),crowdInfo=this.senseCrowd(),sBoost=this.sense(speedBoosts);
+        this.closestFoodAngle=fInfo.angle;this.closestPoisonAngle=pInfo.angle;
+
+        const inputs=[fInfo.dist,fInfo.angle,pInfo.dist,pInfo.angle,oInfo[0],oInfo[1],...wallInfo,crowdInfo[0],crowdInfo[2],crowdInfo[3],this.memory[0],this.memory[1]];
+        const outputs=this.brain.predict(inputs);
+        this.memory=[outputs[0]*0.5,outputs[1]*0.5];
+        this.turnRate=outputs[0]*0.15;
+        let baseSpeed=(outputs[1]+1)/2*2.5;
+        if(sBoost.dist<1.0)baseSpeed*=1.8;
+        this.speed=baseSpeed;this.angle+=this.turnRate;
+
+        if(controlledCreature===this){const dx=mouseX-this.x,dy=mouseY-this.y;let ad=Math.atan2(dy,dx)-this.angle;ad=Math.atan2(Math.sin(ad),Math.cos(ad));this.angle+=ad*0.1;this.speed=2.5;}
+
+        this.flock();
+
+        const mvx=Math.cos(this.angle)*this.speed, mvy=Math.sin(this.angle)*this.speed;
+        const steps=Math.max(1,Math.ceil(this.speed/3));
+        const smx=mvx/steps, smy=mvy/steps;
+        let hitWall=false;
+        for(let s=0;s<steps;s++){
+            this.x+=smx; this.y+=smy;
+            if(this.x<0||this.x>W||this.y<0||this.y>H){hitWall=true;this.x=Math.max(0,Math.min(W,this.x));this.y=Math.max(0,Math.min(H,this.y));}
+        }
+        if(hitWall)this.health-=0.05;
+
+        for(let iter=0;iter<3;iter++){
+            for(const obs of obstacles){const dx=this.x-obs.x,dy=this.y-obs.y,d=Math.sqrt(dx*dx+dy*dy);if(d<obs.r+this.radius){const pa=Math.atan2(dy,dx);this.x=obs.x+Math.cos(pa)*(obs.r+this.radius+1);this.y=obs.y+Math.sin(pa)*(obs.r+this.radius+1);this.health-=0.01;}}
+        }
+
+        this.checkEating();
+    }
+    checkEating(){
+        for(let i=foods.length-1;i>=0;i--){if(Math.hypot(foods[i].x-this.x,foods[i].y-this.y)<this.radius+4){foods.splice(i,1);this.health=Math.min(1,this.health+0.25);this.energy=Math.min(1,this.energy+0.1);this.fitness+=10;this.foodEaten++;spawnItem(foods,1);}}
+        for(let i=goldFoods.length-1;i>=0;i--){if(Math.hypot(goldFoods[i].x-this.x,goldFoods[i].y-this.y)<this.radius+5){goldFoods.splice(i,1);this.health=Math.min(1,this.health+0.4);this.energy=Math.min(1,this.energy+0.2);this.fitness+=25;this.foodEaten++;spawnItem(goldFoods,1);}}
+        for(let i=speedBoosts.length-1;i>=0;i--){if(Math.hypot(speedBoosts[i].x-this.x,speedBoosts[i].y-this.y)<this.radius+5){speedBoosts.splice(i,1);this.fitness+=5;spawnItem(speedBoosts,1);}}
+        for(let i=poisons.length-1;i>=0;i--){if(Math.hypot(poisons[i].x-this.x,poisons[i].y-this.y)<this.radius+4){poisons.splice(i,1);this.health-=0.35;this.fitness=Math.max(0,this.fitness-12);this.poisonEaten++;spawnItem(poisons,1);}}
+        for(let i=creatures.length-1;i>=0;i--){const o=creatures[i];if(o===this||!o.alive)continue;if(this.radius>o.radius+2&&Math.hypot(o.x-this.x,o.y-this.y)<this.radius+o.radius){o.alive=false;this.health=Math.min(1,this.health+0.3);this.energy=Math.min(1,this.energy+0.3);this.fitness+=15;}}
+    }
+}
+
+function spawnItem(list,count){
+    for(let i=0;i<count;i++){let x,y,valid,att=0;do{x=Math.random()*(W-40)+20;y=Math.random()*(H-40)+20;valid=true;for(const obs of obstacles){if(Math.hypot(x-obs.x,y-obs.y)<obs.r+10){valid=false;break;}}att++;}while(!valid&&att<20);list.push({x,y});}
+}
+function generateObstacles(){
+    obstacles=[];
+    for(let i=0;i<CFG.obstacles;i++){let x,y,r,valid,att=0;do{r=25+Math.random()*30;x=r+Math.random()*(W-2*r);y=r+Math.random()*(H-2*r);valid=Math.hypot(x-W/2,y-H/2)>100;att++;}while(!valid&&att<50);obstacles.push({x,y,r});}
+}
+function tournamentSelect(pool,k){let best=null;for(let i=0;i<k;i++){const c=pool[Math.floor(Math.random()*pool.length)];if(!best||c.fitness>best.fitness)best=c;}return best;}
+
+function nextGeneration(){
+    const sorted=creatures.filter(c=>c.alive||c.fitness>0).sort((a,b)=>b.fitness-a.fitness);
+    if(!sorted.length)return;
+    const maxFit=sorted[0].fitness;
+    if(maxFit>highestFitness){highestFitness=maxFit;document.getElementById('val-best').textContent=highestFitness;}
+    fitnessHistory.push({avg:sorted.reduce((s,c)=>s+c.fitness,0)/sorted.length,best:maxFit});
+    if(fitnessHistory.length>100)fitnessHistory.shift();
+
+    const eliteCount=Math.max(1,Math.floor(CFG.popSize*CFG.elitePercent));
+    const elites=sorted.slice(0,eliteCount);
+    const adaptiveMut=CFG.baseMutRate*Math.max(0.3,1-generation*0.01);
+    const next=[];
+
+    for(let i=0;i<eliteCount;i++){const e=elites[i];const c=new Creature(Math.random()*W,Math.random()*H,e.brain.deepCopy());c.hue=e.hue;c.color=`hsl(${e.hue},80%,60%)`;c.generation=generation+1;c.parentId=e.id;next.push(c);}
+    for(let i=eliteCount;i<CFG.popSize;i++){
+        const pA=tournamentSelect(elites.length?elites:sorted,CFG.tournamentK),pB=tournamentSelect(sorted,CFG.tournamentK);
+        const wc=pA.brain.getWC();const totalW=wc.w1+wc.w2;const cw=[];
+        for(let w=0;w<totalW;w++)cw.push(Math.random()>0.5?pA.brain.weights[w]:pB.brain.weights[w]);
+        const cb=new NeuralNetwork(CFG.hiddenNeurons,cw);cb.mutate(adaptiveMut);
+        const ch=(pA.hue+pB.hue+(Math.random()-0.5)*30)%360;
+        const c=new Creature(Math.random()*W,Math.random()*H,cb);c.hue=(ch+360)%360;c.color=`hsl(${c.hue},80%,60%)`;c.generation=generation+1;c.parentId=pA.id;next.push(c);
+    }
+    creatures=next;generation++;epochTimer=0;selectedCreature=null;
+    document.getElementById('val-gen').textContent=generation;
+    document.getElementById('val-mut').textContent=(adaptiveMut*100).toFixed(1)+'%';
+    document.getElementById('sel-info').textContent='点击生物查看详情';
+    document.getElementById('sel-lineage').textContent='';
+}
+
+function initSimulation(){
+    creatures=[];foods=[];poisons=[];speedBoosts=[];goldFoods=[];
+    generation=1;highestFitness=0;epochTimer=0;fitnessHistory=[];
+    selectedCreature=null;controlledCreature=null;
+    generateObstacles();
+    spawnItem(foods,CFG.foodCount);spawnItem(poisons,CFG.poisonCount);spawnItem(speedBoosts,5);spawnItem(goldFoods,3);
+    for(let i=0;i<CFG.popSize;i++)creatures.push(new Creature(Math.random()*W,Math.random()*H));
+    document.getElementById('val-gen').textContent=generation;
+    document.getElementById('val-best').textContent=highestFitness;
+}
+
+let respawnTimer=0;
+function dynamicRespawn(){
+    respawnTimer++;
+    if(respawnTimer%30===0&&foods.length<CFG.foodCount)spawnItem(foods,1);
+    if(respawnTimer%40===0&&poisons.length<CFG.poisonCount)spawnItem(poisons,1);
+    if(respawnTimer%200===0&&speedBoosts.length<6)spawnItem(speedBoosts,1);
+    if(respawnTimer%300===0&&goldFoods.length<4)spawnItem(goldFoods,1);
+}
+
+function updateFrame(){
+    epochTimer++;dynamicRespawn();
+    let aliveCount=0;
+    for(const c of creatures){c.update();if(c.alive)aliveCount++;}
+    document.getElementById('val-alive').textContent=`${aliveCount}/${CFG.popSize}`;
+    document.getElementById('val-time').textContent=`${epochTimer}/${CFG.maxEpoch}`;
+    document.getElementById('val-food').textContent=foods.length+goldFoods.length;
+    document.getElementById('val-poison').textContent=poisons.length;
+    if(aliveCount===0||epochTimer>=CFG.maxEpoch)nextGeneration();
+}
+
+function draw(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    const vw=rect.width, vh=rect.height;
+    ctx.clearRect(0,0,vw,vh);
+
+    const sx=vw/W, sy=vh/H;
+
+    ctx.fillStyle='rgba(16,185,129,0.1)';
+    for(const f of foods){ctx.beginPath();ctx.arc(f.x*sx,f.y*sy,4*Math.min(sx,sy),0,Math.PI*2);ctx.fill();}
+
+    ctx.fillStyle='#fbbf24';
+    for(const g of goldFoods){ctx.beginPath();ctx.arc(g.x*sx,g.y*sy,5*Math.min(sx,sy),0,Math.PI*2);ctx.fill();}
+
+    ctx.fillStyle='#3b82f6';
+    for(const s of speedBoosts){ctx.save();ctx.translate(s.x*sx,s.y*sy);const sc=Math.min(sx,sy);ctx.scale(sc,sc);ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(5,5);ctx.lineTo(-5,5);ctx.closePath();ctx.fill();ctx.restore();}
+
+    ctx.fillStyle='#ef4444';
+    for(const p of poisons){ctx.beginPath();ctx.arc(p.x*sx,p.y*sy,4*Math.min(sx,sy),0,Math.PI*2);ctx.fill();}
+
+    for(const obs of obstacles){
+        ctx.fillStyle='#374151';ctx.strokeStyle='#4b5563';ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(obs.x*sx,obs.y*sy,obs.r*Math.min(sx,sy),0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.06)';
+        ctx.beginPath();ctx.arc(obs.x*sx,obs.y*sy,obs.r*0.4*Math.min(sx,sy),0,Math.PI*2);ctx.fill();
+    }
+
+    for(const c of creatures){
+        if(!c.alive)continue;
+        const cx=c.x*sx, cy=c.y*sy, sc=Math.min(sx,sy);
+
+        if(c===selectedCreature){
+            ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+            ctx.beginPath();ctx.arc(cx,cy,c.perceptionRadius*sc,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+
+            ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1.5;
+            ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(c.angle)*c.perceptionRadius*sc,cy+Math.sin(c.angle)*c.perceptionRadius*sc);ctx.stroke();
+
+            ctx.strokeStyle='rgba(16,185,129,0.6)';ctx.lineWidth=1;
+            ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(c.angle+c.closestFoodAngle)*80*sc,cy+Math.sin(c.angle+c.closestFoodAngle)*80*sc);ctx.stroke();
+
+            ctx.strokeStyle='rgba(239,68,68,0.6)';
+            ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(c.angle+c.closestPoisonAngle)*80*sc,cy+Math.sin(c.angle+c.closestPoisonAngle)*80*sc);ctx.stroke();
+        }
+
+        ctx.save();ctx.translate(cx,cy);ctx.rotate(c.angle);ctx.scale(sc,sc);
+        ctx.fillStyle=c.color;ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-6,-5);ctx.lineTo(-2,0);ctx.lineTo(-6,5);ctx.closePath();ctx.fill();
+        ctx.strokeStyle=`rgba(255,255,255,${c.health*0.5})`;ctx.lineWidth=1.5/sc;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(12,0);ctx.stroke();
+        ctx.restore();
+
+        if(c===controlledCreature){ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(cx,cy,10*sc,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+    }
+    if(controlledCreature&&controlledCreature.alive){ctx.strokeStyle='rgba(251,191,36,0.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(controlledCreature.x*sx,controlledCreature.y*sy);ctx.lineTo(mouseX,mouseY);ctx.stroke();}
+}
+
+function drawNN(){
+    const cw=268, ch=130;
+    nnCtx.clearRect(0,0,cw,ch);
+    if(!selectedCreature||!selectedCreature.alive){nnCtx.fillStyle='#6b7280';nnCtx.font='12px sans-serif';nnCtx.textAlign='center';nnCtx.fillText('未选中生物',cw/2,ch/2+4);nnCtx.textAlign='left';return;}
+    const brain=selectedCreature.brain;
+    const layers=[{n:brain.inputSize,x:28,l:'输入层'},{n:brain.hiddenSize,x:134,l:'隐藏层'},{n:brain.outputSize,x:240,l:'输出层'}];
+    const fi=selectedCreature.sense(foods),pi=selectedCreature.sense(poisons),oi=selectedCreature.senseObstacles(),wi=selectedCreature.senseWalls(),ci=selectedCreature.senseCrowd();
+    const inputs=[fi.dist,fi.angle,pi.dist,pi.angle,oi[0],oi[1],...wi,ci[0],ci[2],ci[3],selectedCreature.memory[0],selectedCreature.memory[1]];
+    const wc=brain.getWC();let hv=[];
+    for(let h=0;h<brain.hiddenSize;h++){let s=0;for(let i=0;i<brain.inputSize;i++)s+=(inputs[i]||0)*brain.weights[h*brain.inputSize+i];hv.push(Math.tanh(s));}
+
+    const np=[];
+    for(let l=0;l<layers.length;l++){np[l]=[];const ly=layers[l];const tH=ly.n*11;const sy=ch/2+4-tH/2;for(let n=0;n<ly.n;n++)np[l].push({x:ly.x,y:sy+n*11+5});}
+
+    for(let h=0;h<brain.hiddenSize;h++)for(let i=0;i<brain.inputSize;i++){const w=brain.weights[h*brain.inputSize+i],a=Math.min(1,Math.abs(w));nnCtx.strokeStyle=w>0?`rgba(16,185,129,${a*0.5})`:`rgba(239,68,68,${a*0.5})`;nnCtx.lineWidth=Math.abs(w)*1.2;nnCtx.beginPath();nnCtx.moveTo(np[0][i].x,np[0][i].y);nnCtx.lineTo(np[1][h].x,np[1][h].y);nnCtx.stroke();}
+    for(let o=0;o<brain.outputSize;o++)for(let h=0;h<brain.hiddenSize;h++){const w=brain.weights[wc.w1+o*brain.hiddenSize+h],a=Math.min(1,Math.abs(w));nnCtx.strokeStyle=w>0?`rgba(16,185,129,${a*0.5})`:`rgba(239,68,68,${a*0.5})`;nnCtx.lineWidth=Math.abs(w)*1.2;nnCtx.beginPath();nnCtx.moveTo(np[1][h].x,np[1][h].y);nnCtx.lineTo(np[2][o].x,np[2][o].y);nnCtx.stroke();}
+
+    for(let l=0;l<layers.length;l++)for(let n=0;n<np[l].length;n++){
+        const p=np[l][n];let v=0.5;
+        if(l===0)v=Math.max(0,Math.min(1,(inputs[n]+1)/2));else if(l===1)v=Math.max(0,Math.min(1,(hv[n]+1)/2));else v=Math.max(0,Math.min(1,(brain.prevOutput[n]+1)/2));
+        const r=3+v*2.5,hue=v>0.5?142:0;
+        nnCtx.fillStyle=`hsl(${hue},70%,${40+v*30}%)`;nnCtx.beginPath();nnCtx.arc(p.x,p.y,r,0,Math.PI*2);nnCtx.fill();
+        nnCtx.strokeStyle='#374151';nnCtx.lineWidth=0.8;nnCtx.beginPath();nnCtx.arc(p.x,p.y,r,0,Math.PI*2);nnCtx.stroke();
+    }
+    nnCtx.fillStyle='#9ca3af';nnCtx.font='9px sans-serif';nnCtx.textAlign='center';
+    nnCtx.fillText(layers[0].l,28,ch-2);nnCtx.fillText(layers[1].l,134,ch-2);nnCtx.fillText(layers[2].l,240,ch-2);
+    nnCtx.textAlign='left';
+}
+
+function drawChart(){
+    const rect=chartCanvas.parentElement.getBoundingClientRect();
+    const cw=rect.width;
+    chartCanvas.width=cw*dpr;chartCanvas.height=64*dpr;
+    chartCtx.setTransform(dpr,0,0,dpr,0,0);
+    chartCtx.clearRect(0,0,cw,64);
+
+    if(fitnessHistory.length<2){chartCtx.fillStyle='#6b7280';chartCtx.font='12px sans-serif';chartCtx.textAlign='center';chartCtx.fillText('等待世代数据...',cw/2,36);chartCtx.textAlign='left';return;}
+    let maxVal=1;for(const h of fitnessHistory){if(h.best>maxVal)maxVal=h.best;if(h.avg>maxVal)maxVal=h.avg;}
+    const pad=30,chartW=cw-pad-10,chartH=50;
+    chartCtx.strokeStyle='#1e293b';chartCtx.lineWidth=1;chartCtx.beginPath();chartCtx.moveTo(pad,4);chartCtx.lineTo(pad,chartH+4);chartCtx.lineTo(cw-10,chartH+4);chartCtx.stroke();
+    chartCtx.fillStyle='#6b7280';chartCtx.font='9px monospace';chartCtx.fillText(maxVal.toFixed(0),1,14);chartCtx.fillText('0',12,chartH+3);
+    const step=chartW/(fitnessHistory.length-1);
+    chartCtx.strokeStyle='#10b981';chartCtx.lineWidth=2;chartCtx.beginPath();
+    for(let i=0;i<fitnessHistory.length;i++){const x=pad+i*step,y=chartH+4-(fitnessHistory[i].best/maxVal)*chartH;i===0?chartCtx.moveTo(x,y):chartCtx.lineTo(x,y);}chartCtx.stroke();
+    chartCtx.strokeStyle='#3b82f6';chartCtx.lineWidth=2;chartCtx.beginPath();
+    for(let i=0;i<fitnessHistory.length;i++){const x=pad+i*step,y=chartH+4-(fitnessHistory[i].avg/maxVal)*chartH;i===0?chartCtx.moveTo(x,y):chartCtx.lineTo(x,y);}chartCtx.stroke();
+}
+
+function selectCreatureAt(mx,my){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    const sx=rect.width/W,sy=rect.height/H;
+    let best=null,bestDist=Infinity;
+    for(const c of creatures){if(!c.alive)continue;const d=Math.hypot(c.x*sx-mx,c.y*sy-my);if(d<20&&d<bestDist){bestDist=d;best=c;}}
+    return best;
+}
+
+function updateSelInfo(){
+    if(!selectedCreature||!selectedCreature.alive){document.getElementById('sel-info').textContent='点击生物查看详情';document.getElementById('sel-lineage').textContent='';return;}
+    const c=selectedCreature;
+    document.getElementById('sel-info').innerHTML=`编号: ${c.id} · 第${c.generation}代<br>血量: ${(c.health*100).toFixed(0)}% · 能量: ${(c.energy*100).toFixed(0)}%<br>适应度: ${c.fitness} · 吃食物: ${c.foodEaten} · 吃毒: ${c.poisonEaten}<br>速度: ${c.speed.toFixed(2)} · 转向: ${c.turnRate.toFixed(3)} · 存活: ${c.timeAlive}帧`;
+    document.getElementById('sel-lineage').textContent=c.parentId?`父代ID: ${c.parentId}`:'创始者';
+}
+
+canvas.addEventListener('click',(e)=>{
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    if(clickMode==='food'){const r=canvas.parentElement.getBoundingClientRect();const sx=W/r.width,sy=H/r.height;spawnItem(foods,1);foods[foods.length-1].x=mx*sx;foods[foods.length-1].y=my*sy;}
+    else if(clickMode==='poison'){const r=canvas.parentElement.getBoundingClientRect();const sx=W/r.width,sy=H/r.height;spawnItem(poisons,1);poisons[poisons.length-1].x=mx*sx;poisons[poisons.length-1].y=my*sy;}
+    else if(clickMode==='select'){selectedCreature=selectCreatureAt(mx,my);}
+    else if(clickMode==='control'){const c=selectCreatureAt(mx,my);if(c){controlledCreature=controlledCreature===c?null:c;selectedCreature=c;}else{controlledCreature=null;}}
+});
+canvas.addEventListener('mousemove',(e)=>{const rect=canvas.getBoundingClientRect();mouseX=e.clientX-rect.left;mouseY=e.clientY-rect.top;});
+
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));b.classList.add('active');clickMode=b.dataset.mode;}));
+document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-speed]').forEach(x=>x.classList.remove('active'));b.classList.add('active');CFG.simSpeed=parseInt(b.dataset.speed);}));
+
+const paramMap={
+    'p-pop':{key:'popSize',fmt:v=>v},'p-food':{key:'foodCount',fmt:v=>v},'p-poison':{key:'poisonCount',fmt:v=>v},
+    'p-obs':{key:'obstacles',fmt:v=>v},'p-mut':{key:'baseMutRate',fmt:v=>v+'%',transform:v=>v/100},
+    'p-elite':{key:'elitePercent',fmt:v=>v+'%',transform:v=>v/100},'p-tourn':{key:'tournamentK',fmt:v=>v},
+    'p-hidden':{key:'hiddenNeurons',fmt:v=>v},'p-flock':{key:'flockStrength',fmt:v=>v+'%',transform:v=>v/100},
+    'p-epoch':{key:'maxEpoch',fmt:v=>v}
+};
+Object.keys(paramMap).forEach(id=>{
+    const el=document.getElementById(id),cfg=paramMap[id];
+    if(!el)return;
+    el.addEventListener('input',()=>{const val=parseInt(el.value);CFG[cfg.key]=cfg.transform?cfg.transform(val):val;document.getElementById('v-'+id.split('-')[1]).textContent=cfg.fmt(val);});
+});
+
+function gameLoop(){for(let i=0;i<CFG.simSpeed;i++)updateFrame();draw();drawNN();drawChart();updateSelInfo();requestAnimationFrame(gameLoop);}
+initSimulation();gameLoop();
+</script>
+</body>
+</html>

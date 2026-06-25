@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>部落文明</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#060a12;color:#eee;font-family:"Microsoft YaHei",system-ui,sans-serif;user-select:none}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
+#top{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 10px;background:rgba(17,24,39,0.9);border-bottom:1px solid #333;flex-wrap:wrap;font-size:11px;min-height:32px}
+.st{text-align:center;font-family:monospace}.sl{font-size:7px;color:#888}.sv{font-size:13px;font-weight:bold}
+#pnl{position:absolute;top:36px;right:4px;z-index:10;width:290px;max-height:calc(100vh-44px);overflow-y:auto;background:rgba(17,24,39,0.9);border:1px solid #333;border-radius:8px;padding:6px 8px}
+#pnl h3{font-size:11px;color:#10b981;margin:5px 0 3px;border-bottom:1px solid #333}
+.cr{display:flex;justify-content:space-between;margin:2px 0;font-size:10px;color:#aaa}
+.cr input{width:80px;accent-color:#10b981;height:12px}
+button{background:#10b981;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:9px}
+#log{max-height:55px;overflow-y:auto;font-size:8px;color:#aaa;font-family:monospace;background:#060a14;border:1px solid #333;border-radius:3px;padding:2px 4px;margin-top:2px;line-height:1.3}
+#log::-webkit-scrollbar{width:2px}#log::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
+#tlist{font-size:8px;color:#aaa;font-family:monospace;max-height:60px;overflow-y:auto;background:#060a14;border-radius:3px;padding:2px;margin-top:2px}
+#popup{position:absolute;top:45%;left:50%;z-index:20;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);border:2px solid #10b981;border-radius:12px;padding:12px 20px;text-align:center;pointer-events:none;opacity:0;transition:opacity .5s}
+#popup.show{opacity:1}#popup h2{color:#10b981;font-size:14px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top">
+  <span style="color:#10b981;font-weight:bold;font-size:13px">⚔ 部落文明</span>
+  <div class="st"><div class="sl">生物</div><div class="sv" id="vPop" style="color:#ffd43b">0</div></div>
+  <div class="st"><div class="sl">部落</div><div class="sv" id="vTr" style="color:#4dabf7">0</div></div>
+  <div class="st"><div class="sl">战争</div><div class="sv" id="vWar" style="color:#ef4444">0</div></div>
+  <div class="st"><div class="sl">世代</div><div class="sv" id="vGen" style="color:#3b82f6">1</div></div>
+  <div class="st"><div class="sl">最高分</div><div class="sv" id="vBest" style="color:#10b981">0</div></div>
+  <div class="st"><div class="sl">速度</div><div class="sv" id="vSpeed">1x</div></div>
+</div>
+<div id="pnl">
+  <h3>环境</h3>
+  <div class="cr"><label>🌿资源量</label><input type="range" id="cRes" min="10" max="100" value="40"><span id="dRes">40</span></div>
+  <div class="cr"><label>🧬变异率</label><input type="range" id="cMut" min="1" max="40" value="10"><span id="dMut">10%</span></div>
+  <div class="cr"><label>⚔战争倾向</label><input type="range" id="cWar" min="0" max="100" value="30"><span id="dWar">30%</span></div>
+  <div class="cr"><label>⚡速度</label><input type="range" id="cSpeed" min="1" max="50" value="1"><span id="dSpeed">1x</span></div>
+  <h3>部落列表</h3>
+  <div id="tlist"><div style="color:#666">等待...</div></div>
+  <h3>日志</h3>
+  <div id="log"><div style="color:#666">启动中...</div></div>
+  <h3>操作</h3>
+  <div style="display:flex;gap:2px;flex-wrap:wrap">
+    <button onclick="rst()">🔄重置</button>
+    <button onclick="inj(5)">🌱+生物</button>
+    <button onclick="pp()" id="btnP">⏸</button>
+    <button onclick="this.parentElement.parentElement.style.display='none'">✖</button>
+  </div>
+</div>
+<div id="popup"><h2 id="popT">⚔</h2><p id="popD" style="color:#aaa;font-size:10px;margin-top:3px"></p></div>
+
+<script>
+// ══ Setup ══
+var C=document.getElementById('c'),X=C.getContext('2d');
+var W=innerWidth,H=innerHeight,D=Math.min(devicePixelRatio||1,2);
+C.width=W*D;C.height=H*D;X.setTransform(D,0,0,D,0,0);
+
+// ══ Config ══
+var CFG={res:40,mut:0.1,war:0.3,spd:1,POP:300,RE:25,ME:45,MT:0.035,DIV:75,MX:5000};
+
+// ══ State ══
+var O=[],R=[],P=[],M=[],nid=1,T=[],tid=1;
+var C2={x:W/2,y:H/2};
+var gen=1,bf=0,wc=0,fi=0,pz=0;
+
+// ══ Utils ══
+function $(i){return document.getElementById(i);}
+function lg(m){var l=$('log'),d=new Date(),t=String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');l.innerHTML='<div>['+t+'] '+m+'</div>'+l.innerHTML;if(l.children>20)l.removeChild(l.lastChild);}
+function pp(t,d){$('popT').textContent=t;$('popD').textContent=d||'';$('popup').classList.add('show');setTimeout(function(){$('popup').classList.remove('show');},2500);}
+
+// ══ Terrain (simplified - just a static colored background) ══
+var TN=[],TC=null;
+function bldT(){
+  var cs=40,cl=['#1a3a1a','#0d2818','#3a2a0a','#0a1a3a'];
+  var ro=Math.ceil(H/cs)+1,co=Math.ceil(W/cs)+1;
+  TN=[];TC=document.createElement('canvas');TC.width=W;TC.height=H;
+  var tx=TC.getContext('2d');
+  for(var y=0;y<ro;y++){TN[y]=[];for(var x=0;x<co;x++){var t=Math.floor(Math.random()*4);TN[y][x]=t;tx.fillStyle=cl[t];tx.fillRect(x*cs,y*cs,cs,cs);}}
+}
+function gT(x,y){var r=Math.floor(y/40),c=Math.floor(x/40);if(TN[r]&&TN[r][c]!==undefined)return TN[r][c];return 0;}
+
+// ══ Resources ══
+var RC=['#10b981','#78716c','#4dabf7'];
+function sR(n){for(var i=0;i<n;i++){var x=40+Math.random()*(W-80),y=40+Math.random()*(H-80);if(gT(x,y)!==3)R.push({x:x,y:y,t:Math.floor(Math.random()*3),a:100});}}
+function gR(){if(Math.random()<0.2&&R.length<CFG.res){var x=40+Math.random()*(W-80),y=40+Math.random()*(H-80);if(gT(x,y)!==3)R.push({x:x,y:y,t:0,a:100});}}
+
+// ══ Grid ══
+var G=[],GS=60,RG=[];
+function bG(){
+  G=[];RG=[];
+  var co=Math.ceil(W/GS)+2,ro=Math.ceil(H/GS)+2;
+  for(var y=0;y<ro;y++){G[y]=[];RG[y]=[];for(var x=0;x<co;x++){G[y][x]=[];RG[y][x]=[];}}
+  for(var i=0;i<O.length;i++){var o=O[i];if(!o.al)continue;var gx=Math.floor(o.x/GS),gy=Math.floor(o.y/GS);if(G[gy]&&G[gy][gx])G[gy][gx].push(o);}
+  for(var i=0;i<R.length;i++){var r=R[i];var gx=Math.floor(r.x/GS),gy=Math.floor(r.y/GS);if(RG[gy]&&RG[gy][gx])RG[gy][gx].push(r);}
+}
+function nr(x,y,r){
+  var a=[];
+  var mx=Math.max(0,Math.floor((x-r)/GS)),Mx=Math.min(G[0]?G[0].length-1:0,Math.floor((x+r)/GS));
+  var my=Math.max(0,Math.floor((y-r)/GS)),My=Math.min(G.length-1,Math.floor((y+r)/GS));
+  for(var gy=my;gy<=My;gy++)for(var gx=mx;gx<=Mx;gx++){var c=G[gy]?G[gy][gx]:null;if(!c)continue;for(var k=0;k<c.length;k++){var o=c[k];if(o.al&&Math.hypot(o.x-x,o.y-y)<r)a.push(o);}}
+  return a;
+}
+function nrR(x,y,r){
+  var a=[];
+  var mx=Math.max(0,Math.floor((x-r)/GS)),Mx=Math.min(RG[0]?RG[0].length-1:0,Math.floor((x+r)/GS));
+  var my=Math.max(0,Math.floor((y-r)/GS)),My=Math.min(RG.length-1,Math.floor((y+r)/GS));
+  for(var gy=my;gy<=My;gy++)for(var gx=mx;gx<=Mx;gx++){var c=RG[gy]?RG[gy][gx]:null;if(!c)continue;for(var k=0;k<c.length;k++){var res=c[k];if(Math.hypot(res.x-x,res.y-y)<r)a.push(res);}}
+  return a;
+}
+
+// ══ Tribes ══
+function mT(l){
+  var t={id:tid++,nm:String.fromCharCode(64+tid%26)+tid,cl:'hsl('+((tid-1)*75%360)+',70%,55%)',
+    mb:[],tx:l.x,ty:l.y,tr:80,rs:20,wr:0,en:{},ag:0,ld:l};
+  T.push(t);return t;
+}
+function jT(o,t){if(t.mb.indexOf(o)<0)t.mb.push(o);o.tr=t;o.tc=t.cl;}
+function tC(t){if(t&&t.cl)return t.cl;return'hsl('+((t?t.id:0)*137%360)+',70%,55%)';}
+
+// ══ Messages ══
+function bc(o,t){M.push({f:o,t:t||'•',l:90});}
+function uM(){for(var i=M.length-1;i>=0;i--){M[i].l--;M[i].y-=0.1;if(M[i].l<=0)M.splice(i,1);}}
+
+// ══ NN ══
+function NN(g){
+  this.n={};this.c=[];this.ii=[];this.oi=[];
+  if(g)this.fg(g);
+}
+NN.prototype={
+  fg:function(g){
+    var p=0,nN=Math.floor(g[p++]||4),nC=Math.floor(g[p++]||0);
+    this.n={};this.c=[];
+    for(var i=0;i<nN;i++){var id=Math.floor(g[p++]||i),ty=Math.floor(g[p++]||1),b=g[p++]||0;this.n[id]={b:b,a:0};if(ty===0)this.ii.push(id);else if(ty===2)this.oi.push(id);}
+    for(var i=0;i<nC;i++){var f=Math.floor(g[p++]||0),t=Math.floor(g[p++]||0),w=g[p++]||0,e=g[p++]||1;this.c.push({f:f,t:t,w:w,e:!!e});}
+    if(this.ii.length<4){for(var i=0;i<4;i++){this.n[100+i]={b:0,a:0};this.ii.push(100+i);}}
+    if(this.oi.length<3){for(var i=0;i<3;i++){this.n[200+i]={b:0,a:0};this.oi.push(200+i);}}
+  },
+  act:function(inp){
+    for(var i=0;i<this.ii.length&&i<inp.length;i++){var id=this.ii[i];if(this.n[id])this.n[id].a=Math.max(-1,Math.min(1,inp[i]||0));}
+    var hd=[];for(var k in this.n){var id=parseInt(k);if(this.ii.indexOf(id)<0&&this.oi.indexOf(id)<0)hd.push(id);}
+    for(var it=0;it<3;it++)for(var h=0;h<hd.length;h++){var id=hd[h],s=this.n[id]?this.n[id].b:0;for(var ci=0;ci<this.c.length;ci++){var cc=this.c[ci];if(cc.e&&cc.t===id)s+=(this.n[cc.f]?this.n[cc.f].a:0)*cc.w;}if(this.n[id])this.n[id].a=Math.tanh(s);}
+    var out=[];for(var i=0;i<this.oi.length;i++){var id=this.oi[i],s=this.n[id]?this.n[id].b:0;for(var ci=0;ci<this.c.length;ci++){var cc=this.c[ci];if(cc.e&&cc.t===id)s+=(this.n[cc.f]?this.n[cc.f].a:0)*cc.w;}out.push(Math.tanh(s));}
+    return out;
+  }
+};
+
+function rG(){
+  var g=[];g.push(7);g.push(12);
+  for(var i=0;i<4;i++){g.push(100+i);g.push(0);g.push(Math.random()*0.2-0.1);}
+  for(var i=0;i<3;i++){g.push(200+i);g.push(2);g.push(Math.random()*0.2-0.1);}
+  for(var i=0;i<4;i++)for(var o=0;o<3;o++){g.push(100+i);g.push(200+o);g.push(Math.random()*2-1);g.push(1);}
+  g.push(Math.random(),Math.random(),Math.random());return g;
+}
+
+// ══ Organism ══
+var Or=function(x,y,g,p,dt,tr){
+  this.id=nid++;this.x=x;this.y=y;this.vx=0;this.vy=0;
+  this.a=Math.random()*6.28;this.r=4;this.en=CFG.DIV*0.5;
+  this.hp=60;this.mhp=60; // health points (separate from energy)
+  this.al=true;this.ag=0;this.fi=0;this.ge=p||1;this.sz=1;
+  this.mt=CFG.MT;
+  this.g=g?g.slice():rG();
+  this.bn=new NN(this.g);
+  this.fd=0;this.kl=0;this.ch=0;
+  this.dt=dt!==undefined?dt:Math.floor(Math.random()*3);
+  this.ldr=false;this.inc=false;
+  var gl=this.g.length;
+  this.agr=Math.abs(this.g[gl-3]||0);
+  this.co=Math.abs(this.g[gl-2]||0.5);
+  this.ld=Math.abs(this.g[gl-1]||0);
+  this.tr=tr||null;this.tc=tr?tr.cl:null;
+  this.cl=this.id;
+};
+Or.prototype={
+  sn:function(){
+    this.sz=1+this.fd*0.012+this.ag*0.001;
+    var bp=null,bd=Infinity;
+    for(var i=0;i<R.length;i++){var r=R[i],d=Math.hypot(r.x-this.x,r.y-this.y);if(d<bd&&d<250){bd=d;bp={d:d/250,a:Math.atan2(r.y-this.y,r.x-this.x)-this.a,tt:r.t};}}
+    if(bp)bp.a=Math.atan2(Math.sin(bp.a),Math.cos(bp.a));
+    var bm=null,bmd=Infinity;
+    var nn=nr(this.x,this.y,200);
+    for(var i=0;i<nn.length;i++){var o=nn[i];if(o===this||!o.al||o.sz*1.3>=this.sz)continue;var d=Math.hypot(o.x-this.x,o.y-this.y);if(d<bmd){bmd=d;bm={d:d/200,a:Math.atan2(o.y-this.y,o.x-this.x)-this.a};}}
+    if(!bm)for(var i=0;i<P.length;i++){var c=P[i],d=Math.hypot(c.x-this.x,c.y-this.y);if(d<bmd){bmd=d;bm={d:d/200,a:Math.atan2(c.y-this.y,c.x-this.x)-this.a};}}
+    if(bm)bm.a=Math.atan2(Math.sin(bm.a),Math.cos(bm.a));
+    var bo=null,bod=Infinity;
+    for(var i=0;i<nn.length;i++){var o=nn[i];if(o===this||!o.al)continue;var d=Math.hypot(o.x-this.x,o.y-this.y);if(d<120&&d<bod){bod=d;bo={d:d/120,a:Math.atan2(o.y-this.y,o.x-this.x)-this.a,fr:o.tr&&this.tr&&o.tr===this.tr?1:0};}}
+    if(bo)bo.a=Math.atan2(Math.sin(bo.a),Math.cos(bo.a));
+    var bm2=Infinity,bestM=null;
+    for(var i=0;i<M.length;i++){var m=M[i],d=Math.hypot(m.f.x-this.x,m.f.y-this.y);if(d<200&&d<bm2){bm2=d;bestM={d:d/200,a:Math.atan2(m.f.y-this.y,m.f.x-this.x)-this.a};}}
+    var cdx=C2.x-this.x,cdy=C2.y-this.y,cd=Math.hypot(cdx,cdy);
+    return[bp?bp.d:1,bp?bp.a:0,bm?bm.d:1,bm?bm.a:0,bo?bo.d:1,bo?bo.a:0,this.en/CFG.DIV,cd/Math.max(W,H),this.sz/5,this.agr,this.co];
+  },
+  up:function(){
+    if(!this.al)return;
+    this.ag++;this.en-=this.mt*(1+this.g.length*0.001+this.sz*0.012);
+    if(this.en<=0||this.ag>CFG.MX){this.al=false;return;}
+    var inp=this.sn(),o=this.bn.act(inp);
+    var mf=o[0]||0,so=o[1]||0;
+    this.a+=mf*0.12;
+    var sp=(0.3+(so+1)*0.5)/Math.max(0.4,this.sz*0.2+0.5);
+    this.vx+=Math.cos(this.a)*sp*0.04;this.vy+=Math.sin(this.a)*sp*0.04;
+    // Food instinct (grid-accelerated)
+    var nearFood=nrR(this.x,this.y,200);
+    for(var i=0;i<nearFood.length;i++){var r=nearFood[i],d=Math.hypot(r.x-this.x,r.y-this.y);if(d>1){var w=1-d/200;this.vx+=(r.x-this.x)/d*w*0.03;this.vy+=(r.y-this.y)/d*w*0.03;}}
+    // Danger avoidance (using spatial grid instead of full scan)
+    var fearMul=this.hp<this.mhp*0.3?2:this.hp<this.mhp*0.6?1.3:1;
+    var nearOrg=nr(this.x,this.y,100);
+    for(var ni=0;ni<nearOrg.length;ni++){var d=nearOrg[ni];if(d===this||!d.al||!d.tr||!this.tr||d.tr===this.tr)continue;
+      if(d.tr.wr>0){var dw=1-Math.hypot(d.x-this.x,d.y-this.y)/100;this.vx-=(d.x-this.x)/Math.max(1,dw*100)*dw*0.06*fearMul;this.vy-=(d.y-this.y)/Math.max(1,dw*100)*dw*0.06*fearMul;}}
+    // Flee from large predators regardless of war
+    var nearPred=nr(this.x,this.y,80);
+    for(var ni=0;ni<nearPred.length;ni++){var d=nearPred[ni];if(d===this||!d.al||d.dt!==1||d.sz<this.sz*0.7)continue;
+      var dd=Math.hypot(d.x-this.x,d.y-this.y);if(dd>1){var dw=1-dd/80;this.vx-=(d.x-this.x)/dd*dw*0.04;this.vy-=(d.y-this.y)/dd*dw*0.04;}}
+    // Tribe cohesion
+    if(this.tr&&this.tr.mb.length>1){var tx=0,ty=0,tc=0;for(var i=0;i<this.tr.mb.length;i++){var tm=this.tr.mb[i];if(tm!==this&&tm.al){tx+=tm.x;ty+=tm.y;tc++;}}if(tc>0){tx/=tc;ty/=tc;var td=Math.hypot(tx-this.x,ty-this.y);if(td>10){this.vx+=(tx-this.x)/td*0.006;this.vy+=(ty-this.y)/td*0.006;}}}
+    // Separation
+    var nn=nr(this.x,this.y,60);for(var i=0;i<nn.length;i++){var o=nn[i];if(o===this||!o.al)continue;var d=Math.hypot(o.x-this.x,o.y-this.y);if(d<8&&d>0){this.vx-=(o.x-this.x)/d*0.04;this.vy-=(o.y-this.y)/d*0.04;}}
+    this.vx+=(Math.random()-0.5)*0.02;this.vy+=(Math.random()-0.5)*0.02;
+    this.vx*=0.92;this.vy*=0.92;
+    this.x+=this.vx;this.y+=this.vy;
+    if(this.x<0||this.x>W||this.y<0||this.y>H){this.en-=1;this.x=Math.max(2,Math.min(W-2,this.x));this.y=Math.max(2,Math.min(H-2,this.y));}
+    this.ldr=this.en>100&&this.fi>20&&this.ld>0.3;
+    // Combat stats (visible to others via this.atk/this.def)
+    this.atk=this.sz*(0.5+this.agr*0.5)*(this.dt===1?1.4:this.dt===2?1.1:0.8);
+    this.def=this.sz*(0.5+Math.min(1,this.en/CFG.DIV)*0.5)*(this.dt===0?1.4:this.dt===2?1.1:0.8);
+    // HP regen (slow) and starvation
+    if(this.en>40)this.hp=Math.min(this.mhp,this.hp+0.02);
+    if(this.en<5)this.hp-=0.05;
+    if(this.hp<=0){this.al=false;P.push({x:this.x,y:this.y,en:CFG.ME*0.1,ag:0});return;}
+    // Collect resources (grid-accelerated)
+    var nearRes=nrR(this.x,this.y,this.r+this.sz*1.5+10);
+    for(var i=nearRes.length-1;i>=0;i--){var r=nearRes[i];if(Math.hypot(r.x-this.x,r.y-this.y)<this.r+this.sz*1.5+3){this.en=Math.min(CFG.DIV*1.5,this.en+CFG.RE);this.fi+=CFG.RE;this.fd++;if(this.tr)this.tr.rs+=Math.ceil(CFG.RE/3);r.a-=20;if(r.a<=0){var idx=R.indexOf(r);if(idx>=0)R.splice(idx,1);}break;}}
+    // Combat - only when meaningful (war, predation, or high aggression)
+    if(this.dt!==0||this.agr>0.3){var nearCombat=nr(this.x,this.y,30);
+    for(var ci=0;ci<nearCombat.length;ci++){var py=nearCombat[ci];if(py===this||!py.al)continue;
+      var cd=Math.hypot(py.x-this.x,py.y-this.y);
+      if(cd<this.r+py.r+this.sz*2+py.sz*2){
+        // Determine if attack happens
+        var isWar=this.tr&&py.tr&&this.tr!==py.tr&&this.tr.wr>0;
+        var isPredation=this.dt===1&&py.dt!==1&&py.sz<this.sz*0.9;
+        var isAggro=this.agr>0.7&&py.sz<this.sz*0.8&&Math.random()<this.agr;
+        if(!isWar&&!isPredation&&!isAggro)continue;
+        var dmgToPrey=Math.max(1,Math.round(this.atk/Math.max(1,py.def||1)*(8+Math.random()*6)));
+        var dmgToSelf=Math.max(0,Math.round((py.atk||1)/Math.max(1,this.def)*2));
+        py.hp-=dmgToPrey;this.hp-=dmgToSelf;
+        this.fi+=Math.round(dmgToPrey*0.3);
+        if(dmgToSelf<1)this.kl++;
+        if(py.hp<=0){
+          py.al=false;this.en=Math.min(CFG.DIV*1.5,this.en+CFG.ME*0.5);this.fi+=CFG.ME;this.fd++;this.kl++;
+          P.push({x:py.x,y:py.y,en:CFG.ME*0.3,ag:0});
+          if(isWar){this.tr.rs+=5;py.tr.rs-=5;lg('⚔ '+this.tr.nm+' 在战争中击杀 '+py.tr.nm+' 成员');}
+          else if(isPredation)lg('🥩 肉食者 #'+this.id+' 捕食了 #'+py.id);
+        }
+        if(this.hp<=0){this.al=false;P.push({x:this.x,y:this.y,en:CFG.ME*0.1,ag:0});if(this.tr&&py.tr&&this.tr!==py.tr)py.tr.rs+=3;}
+        if(this.hp<this.mhp*0.2&&this.al){this.vx-=(py.x-this.x)/cd*0.15;this.vy-=(py.y-this.y)/cd*0.15;}
+        break;
+      }
+    }}
+    // Corpses
+    for(var ci=P.length-1;ci>=0;ci--){var c=P[ci];if(Math.hypot(c.x-this.x,c.y-this.y)<this.r+this.sz*1.5){this.en=Math.min(CFG.DIV*1.2,this.en+CFG.ME*0.3);this.fi+=3;P.splice(ci,1);break;}}
+    // Messages
+    if(Math.random()<0.006+this.ld*0.004){if(this.en<10)bc(this,'⚠');else if(this.ldr)bc(this,'👑');else if(Math.random()<0.4)bc(this,'📯');}
+    // War declaration - leaders with enough resources may attack neighbors
+    if(this.ldr&&this.en>40&&this.tr&&this.tr.wr<=0&&Math.random()<0.005*CFG.war){
+      var es=[];for(var i=0;i<T.length;i++)if(T[i]!==this.tr&&T[i].mb.length>0){
+        var dist=Math.hypot(T[i].tx-this.tr.tx,T[i].ty-this.tr.ty);
+        if(dist<this.tr.tr+T[i].tr+80)es.push({t:T[i],d:dist});
+      }
+      if(es.length>0){es.sort(function(a,b){return a.d-b.d;});var en=es[0].t;this.tr.wr=600;this.tr.en[en.id]=1;en.wr=600;en.en[this.tr.id]=1;bc(this,'⚔');lg('⚔ '+this.tr.nm+' 向 '+en.nm+' 宣战！抢夺领土！');wc++;pp('⚔ 战争爆发',this.tr.nm+' 攻打 '+en.nm);}}
+    // Reproduce
+    if(this.en>=CFG.DIV&&O.length<CFG.POP)this.rp();
+  },
+  rp:function(){
+    var cg=this.mu(this.g.slice());var ang=Math.random()*6.28;
+    var c=new Or(this.x+Math.cos(ang)*(5+this.sz),this.y+Math.sin(ang)*(5+this.sz),cg,this.ge+1,this.dt,this.tr);
+    c.en=this.en*0.3;this.en*=0.6;c.fi=this.fi*0.1;this.ch++;
+    if(c.tr)jT(c,c.tr);O.push(c);
+    if(c.ge>gen){gen=c.ge;$('vGen').textContent=gen;}
+    if(c.fi>bf){bf=c.fi;$('vBest').textContent=Math.round(bf);}
+  },
+  mu:function(g){
+    var r=CFG.mut;
+    for(var i=0;i<g.length;i++){if(Math.random()<r){g[i]+=(Math.random()*2-1)*0.5;if(i===0||i===1)g[i]=Math.max(1,Math.floor(g[i]+0.5));}}
+    var gl=g.length;
+    if(Math.random()<r*0.2&&gl>10){var ci=4+Math.floor(g[0]*3+Math.random()*(g[1]-1));if(ci<gl-5&&ci>4){var f=g[ci],t=g[ci+1];if(f!==undefined&&t!==undefined){var nid=300+Math.floor(Math.random()*1000),ii=4+Math.floor(g[0]*3);g.splice(ii,0,nid,1,Math.random()*0.2-0.1);g[0]++;g[ci+2]*=0.5;g.push(f,nid,Math.random()*2-1,1);g[1]++;}}}
+    if(Math.random()<r*0.1&&g[1]>4){g[1]--;var st=4+Math.floor(g[0]*3);if(st<g.length-1)g.splice(st+Math.floor(Math.random()*Math.floor(g[1]))*4,4);}
+    if(Math.random()<r*0.02)this.dt=(this.dt+Math.floor(Math.random()*3-1)+3)%3;
+    return g;
+  }
+};
+
+// ══ Tribe update ══
+function uT(){
+  for(var i=0;i<O.length;i++){var o=O[i];if(!o.al)continue;
+    if(!o.tr){
+      var ne=null,nd=Infinity;
+      for(var t=0;t<T.length;t++){var ld=T[t].ld;if(ld&&ld.al){var d=Math.hypot(ld.x-o.x,ld.y-o.y);if(d<nd){nd=d;ne=T[t];}}}
+      if(ne&&nd<200)jT(o,ne);
+    }
+  }
+  for(var ti=T.length-1;ti>=0;ti--){
+    var t=T[ti];t.ag++;
+    t.mb=t.mb.filter(function(m){return m.al;});
+    if(t.wr>0)t.wr--;
+    if(t.mb.length>0){var ax=0,ay=0;for(var i=0;i<t.mb.length;i++){ax+=t.mb[i].x;ay+=t.mb[i].y;}t.tx=ax/t.mb.length;t.ty=ay/t.mb.length;t.tr=30+t.mb.length*5;}
+    for(var i=0;i<t.mb.length;i++){var o=t.mb[i];if(o.al&&o.ld>0.4&&o.en>50&&(!t.ld||!t.ld.al||o.fi>t.ld.fi))t.ld=o;}
+    if(t.mb.length===0)T.splice(ti,1);
+  }
+  // Territory-based auto-war: overlapping territories can trigger conflict
+  for(var ti=0;ti<T.length;ti++)for(var tj=ti+1;tj<T.length;tj++){
+    var a=T[ti],b=T[tj];if(a.wr>0||b.wr>0||a.mb.length<2||b.mb.length<2)continue;
+    var dist=Math.hypot(a.tx-b.tx,a.ty-b.ty);
+    if(dist<a.tr+b.tr-15&&Math.random()<0.005*CFG.war){
+      a.wr=600;a.en[b.id]=1;b.wr=600;b.en[a.id]=1;
+      lg('⚔ 领土冲突！'+a.nm+' 和 '+b.nm+' 开战！');wc++;
+      if(Math.random()<0.5)pp('⚔ 领土战争','部落 '+a.nm+' 和 '+b.nm+' 因领土重叠开战');
+    }
+  }
+}
+
+// ══ Species ══
+function dS(){
+  $('vTr').textContent=T.length;$('vWar').textContent=wc;
+  var el=$('tlist');el.innerHTML='';
+  var st=T.slice().sort(function(a,b){return b.mb.length-a.mb.length;});
+  for(var i=0;i<Math.min(6,st.length);i++){var t=st[i];
+    el.innerHTML+='<div style="color:'+tC(t)+'">▸ '+t.nm+': '+t.mb.length+'人 ⚡'+t.rs+(t.wr>0?' ⚔':'')+'</div>';}
+  if(T.length===0)el.innerHTML='<div style="color:#666">等待部落形成...</div>';
+  $('vPop').textContent=O.length;
+}
+
+// ══ Day ══
+// ══ Update ══
+function upd(){
+  gR();bG();
+  for(var i=0;i<O.length;i++){var o=O[i];if(o.al){var t=gT(o.x,o.y);if(t===3)o.en-=0.3;o.up();}}
+  for(var i=P.length-1;i>=0;i--){P[i].ag++;if(P[i].ag>200)P.splice(i,1);}
+  uM();uT();
+  var al=[];for(var i=0;i<O.length;i++)if(O[i].al)al.push(O[i]);O=al;
+  if(fi%20===0)dS();
+  if(fi%100===0){
+    var wcCheck=wc;
+    if(wcCheck>=1&&!window.m1){window.m1=1;pp('⚔ 战争时代','部落间爆发战争');}
+  }
+  $('vSpeed').textContent=CFG.spd+'x';
+  if(O.length===0&&fi>100){lg('⚠ 灭绝，重新播种');for(var i=0;i<15;i++){var o=new Or(100+Math.random()*(W-200),100+Math.random()*(H-200));O.push(o);var t=mT(o);jT(o,t);}gen=1;}
+  fi++;
+}
+
+// ══ Render ══
+function drw(){
+  X.clearRect(0,0,W,H);
+  if(TC)X.drawImage(TC,0,0);
+  // Resources
+  for(var i=0;i<R.length;i++){var r=R[i];X.fillStyle=RC[r.t]+'88';X.beginPath();X.arc(r.x,r.y,4+2*(1-r.a/100),0,6.28);X.fill();}
+  // Corpses
+  for(var i=0;i<P.length;i++){X.fillStyle='rgba(140,100,80,0.3)';X.beginPath();X.arc(P[i].x,P[i].y,2.5,0,6.28);X.fill();}
+  // Messages
+  for(var i=0;i<M.length;i++){var m=M[i];X.fillStyle='rgba(255,255,255,'+Math.min(1,m.l/60)+')';X.font='6px sans-serif';X.textAlign='center';X.fillText(m.t,m.f.x,m.f.y-5);}
+  // Territory
+  for(var ti=0;ti<T.length;ti++){var t=T[ti];if(t.mb.length<2)continue;X.strokeStyle=tC(t)+'44';X.lineWidth=1;X.setLineDash([4,6]);X.beginPath();X.arc(t.tx,t.ty,t.tr,0,6.28);X.stroke();X.setLineDash([]);X.fillStyle=tC(t)+'88';X.font='8px sans-serif';X.textAlign='center';X.fillText('🏠'+t.nm,t.tx,t.ty-t.tr-4);}
+  // Organisms
+  for(var i=0;i<O.length;i++){
+    var o=O[i];if(!o.al)continue;
+    X.save();X.translate(o.x,o.y);X.rotate(o.a);
+    var s=o.r+o.sz;
+    if(o.ldr){X.fillStyle='rgba(255,212,59,0.08)';X.beginPath();X.arc(0,0,s*4,0,6.28);X.fill();X.fillStyle='#ffd43b';X.beginPath();X.arc(0,0,s*1.2,0,6.28);X.fill();}
+    var bc=o.tc||(o.dt===0?'#10b981':o.dt===1?'#ef4444':'#fbbf24');
+    X.fillStyle=bc;X.beginPath();X.moveTo(s*2.2,0);X.lineTo(-s,-s*0.7);X.lineTo(-s*0.3,0);X.lineTo(-s,s*0.7);X.closePath();X.fill();X.strokeStyle='rgba(255,255,255,0.08)';X.lineWidth=0.5;X.stroke();
+    if(o.tr){X.fillStyle='#fff';X.font='4px sans-serif';X.textAlign='center';X.fillText(o.tr.nm,0,-s-4);}
+    // Energy bar (top)
+    var ew=s*2.5,eh=1;X.fillStyle='rgba(0,0,0,0.3)';X.fillRect(-ew/2,-s-3,ew,eh);
+    X.fillStyle=o.en/CFG.DIV>0.4?'#10b981':'#ef4444';X.fillRect(-ew/2,-s-3,ew*Math.min(1,o.en/CFG.DIV),eh);
+    // HP bar (bottom, under creature)
+    X.fillStyle='rgba(0,0,0,0.3)';X.fillRect(-ew/2,s+4,ew,eh);
+    X.fillStyle=o.hp/o.mhp>0.5?'#ff6b6b':'#ff0000';X.fillRect(-ew/2,s+4,ew*Math.max(0,o.hp/o.mhp),eh);
+    // Show power level
+    X.fillStyle='rgba(255,255,255,0.15)';X.font='3px monospace';X.textAlign='center';
+    X.fillText('⚔'+Math.round(o.atk||0)+'🛡'+Math.round(o.def||0),0,o.r+o.sz+10);
+    X.restore();
+  }
+}
+
+// ══ Controls ══
+function rst(){
+  O=[];R=[];P=[];M=[];T=[];nid=1;tid=1;gen=1;bf=0;wc=0;fi=0;window.m1=0;
+  C2={x:W/2,y:H/2};
+  $('vPop').textContent='0';$('vTr').textContent='0';$('vWar').textContent='0';$('vGen').textContent='1';$('vBest').textContent='0';
+  $('tlist').innerHTML='<div style="color:#666">等待...</div>';$('log').innerHTML='<div style="color:#666">启动...</div>';
+  bldT();sR(CFG.res);
+  for(var i=0;i<15;i++){var o=new Or(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3));O.push(o);var t=mT(o);jT(o,t);}
+  lg('🔄 重置 15生物');
+}
+function inj(n){for(var i=0;i<n;i++){var o=new Or(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3));O.push(o);if(T.length>0){var t=T[Math.floor(Math.random()*T.length)];jT(o,t);}else{var t=mT(o);jT(o,t);}}lg('🌱 +'+n);}
+function pp(){pz=!pz;$('btnP').textContent=pz?'▶':'⏸';}
+
+$('cRes').oninput=function(){CFG.res=parseInt(this.value);$('dRes').textContent=CFG.res;};
+$('cMut').oninput=function(){CFG.mut=parseInt(this.value)/100;$('dMut').textContent=parseInt(this.value)+'%';};
+$('cWar').oninput=function(){CFG.war=parseInt(this.value)/100;$('dWar').textContent=parseInt(this.value)+'%';};
+$('cSpeed').oninput=function(){CFG.spd=parseInt(this.value);$('dSpeed').textContent=CFG.spd+'x';$('vSpeed').textContent=CFG.spd+'x';};
+C.addEventListener('click',function(e){var r=C.getBoundingClientRect();sR(3);lg('🌿 新资源');});
+
+// ══ Start ══
+bldT();sR(CFG.res);
+for(var i=0;i<15;i++){var o=new Or(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3));O.push(o);var t=mT(o);jT(o,t);}
+lg('🌍 部落文明启动 15生物');
+var skipRender=0;
+(function lp(){try{
+  if(!pz){for(var s=0;s<CFG.spd;s++)upd();}
+  drw();
+}catch(e){console.error(e);document.body.innerHTML='<pre style="color:red;padding:20px;font-size:14px">'+e.stack+'</pre>';return;}requestAnimationFrame(lp);})();
+</script>
+</body>
+</html>

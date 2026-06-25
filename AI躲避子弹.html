@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>AI 躲避子弹</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0e1a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,sans-serif;touch-action:none;}
+.start-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#0a0e1a 0%,#1a1f2e 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:1000;}
+.start-screen.hidden{display:none;}
+.start-logo{font-size:48px;margin-bottom:10px;}
+.start-title{font-size:24px;font-weight:bold;color:#f59e0b;margin-bottom:8px;}
+.start-subtitle{font-size:13px;color:#9ca3af;margin-bottom:30px;text-align:center;line-height:1.6;}
+.start-form{width:100%;max-width:400px;}
+.start-group{margin-bottom:20px;}
+.start-label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:#9ca3af;}
+.start-value{color:#f59e0b;font-weight:bold;font-family:monospace;}
+.start-slider{width:100%;height:8px;background:#1f2937;border-radius:4px;outline:none;-webkit-appearance:none;}
+.start-slider::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;background:#f59e0b;border-radius:50%;cursor:pointer;box-shadow:0 2px 10px rgba(245,158,11,0.5);}
+.start-presets{display:flex;gap:8px;margin-top:10px;}
+.preset-btn{flex:1;padding:10px;background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:8px;font-size:12px;cursor:pointer;text-align:center;}
+.preset-btn.active{background:#f59e0b;color:#fff;border-color:#f59e0b;}
+.start-btn{width:100%;padding:16px;background:#f59e0b;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:20px;box-shadow:0 4px 20px rgba(245,158,11,0.3);}
+.start-btn:active{transform:scale(0.98);}
+.start-info{margin-top:20px;padding:12px;background:#1f2937;border-radius:8px;font-size:11px;color:#9ca3af;line-height:1.6;}
+.container{display:flex;flex-direction:column;height:100vh;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+.game-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;position:relative;}
+canvas{width:100%;max-width:600px;height:auto;aspect-ratio:4/3;background:#0f1419;border:2px solid #374151;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+.scoreboard{display:flex;justify-content:space-around;align-items:center;width:100%;max-width:600px;padding:12px 20px;background:rgba(17,24,39,0.9);border-radius:12px;margin-top:10px;backdrop-filter:blur(10px);}
+.score-item{text-align:center;padding:0 15px;}
+.score-label{font-size:11px;color:#9ca3af;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.score-value{font-size:32px;font-weight:bold;font-family:'Courier New',monospace;color:#f59e0b;}
+.episode{text-align:center;padding:0 15px;border-left:1px solid #374151;border-right:1px solid #374151;}
+.episode-value{font-size:24px;font-weight:bold;color:#10b981;}
+.best-score{text-align:center;padding:0 15px;}
+.best-score .score-value{color:#8b5cf6;}
+.controls{display:flex;gap:8px;padding:12px;width:100%;max-width:600px;}
+.btn{flex:1;padding:14px 20px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;touch-action:manipulation;}
+.btn:active{transform:scale(0.95);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary{background:#10b981;color:#fff;}
+.btn-secondary{background:#374151;color:#fff;}
+.btn-danger{background:#ef4444;color:#fff;}
+.settings-panel{position:fixed;bottom:0;left:0;right:0;background:rgba(17,24,39,0.98);border-top:2px solid #374151;border-radius:20px 20px 0 0;padding:20px;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.3s ease;z-index:100;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+.settings-panel.show{transform:translateY(0);}
+.settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.settings-title{font-size:18px;font-weight:bold;color:#f59e0b;}
+.close-btn{width:36px;height:36px;border-radius:50%;background:#374151;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.setting-group{margin-bottom:20px;}
+.setting-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:14px;color:#9ca3af;}
+.setting-value{color:#f59e0b;font-weight:bold;font-family:monospace;}
+input[type=range]{width:100%;height:6px;background:#374151;border-radius:3px;outline:none;-webkit-appearance:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;background:#f59e0b;border-radius:50%;cursor:pointer;box-shadow:0 2px 8px rgba(245,158,11,0.4);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.stat-card{background:#1f2937;padding:12px;border-radius:8px;text-align:center;}
+.stat-label{font-size:11px;color:#9ca3af;margin-bottom:4px;}
+.stat-value{font-size:18px;font-weight:bold;color:#e5e7eb;font-family:monospace;}
+.log-container{background:#0f1419;border:1px solid #374151;border-radius:8px;padding:10px;max-height:150px;overflow-y:auto;}
+.log-item{font-size:12px;padding:4px 0;border-bottom:1px solid #1f2937;font-family:monospace;}
+.log-item:last-child{border-bottom:none;}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:99;}
+.overlay.show{opacity:1;pointer-events:auto;}
+.settings-toggle{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;background:rgba(17,24,39,0.9);border:2px solid #374151;color:#f59e0b;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+.training-indicator{position:absolute;top:10px;left:10px;padding:6px 12px;background:rgba(245,158,11,0.2);border:1px solid #f59e0b;border-radius:20px;font-size:12px;color:#f59e0b;font-weight:600;display:none;align-items:center;gap:6px;z-index:10;}
+.training-indicator.show{display:flex;}
+.pulse{width:8px;height:8px;background:#f59e0b;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.pretrain-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(10,14,26,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;border-radius:12px;backdrop-filter:blur(5px);}
+.pretrain-overlay.hidden{display:none;}
+.pretrain-title{font-size:18px;font-weight:bold;color:#f59e0b;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.pretrain-spinner{width:20px;height:20px;border:3px solid #374151;border-top-color:#f59e0b;border-radius:50%;animation:spin 0.5s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pretrain-subtitle{font-size:12px;color:#9ca3af;margin-bottom:16px;}
+.pretrain-progress{width:80%;max-width:300px;height:8px;background:#1f2937;border-radius:4px;overflow:hidden;margin-bottom:8px;}
+.pretrain-bar{height:100%;background:linear-gradient(90deg,#f59e0b,#ef4444);width:0%;transition:width 0.1s;border-radius:4px;}
+.pretrain-stats{font-size:11px;color:#9ca3af;font-family:monospace;margin-bottom:16px;text-align:center;line-height:1.6;}
+.pretrain-skip{padding:8px 20px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;}
+.pretrain-skip:active{transform:scale(0.95);}
+.death-flash{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(239,68,68,0.3);border-radius:12px;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:5;}
+.death-flash.show{opacity:1;}
+.difficulty-bar{width:100%;max-width:600px;height:4px;background:#1f2937;border-radius:2px;margin-bottom:4px;overflow:hidden;}
+.difficulty-fill{height:100%;background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444);transition:width 0.3s;border-radius:2px;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:#1f2937;}
+::-webkit-scrollbar-thumb{background:#374151;border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="start-screen" id="startScreen">
+    <div class="start-logo">✈️</div>
+    <div class="start-title">AI 躲避子弹</div>
+    <div class="start-subtitle">
+        729种状态空间 + 速度感知 + 墙感知<br>
+        AI 将学会预判危险并远离死角
+    </div>
+    <div class="start-form">
+        <div class="start-group">
+            <div class="start-label">
+                <span>🧠 预训练回合数</span>
+                <span class="start-value" id="startPretrainVal">5000</span>
+            </div>
+            <input type="range" class="start-slider" id="startPretrain" min="0" max="50000" step="1000" value="5000">
+            <div class="start-presets">
+                <div class="preset-btn" onclick="setPreset(0)">跳过</div>
+                <div class="preset-btn" onclick="setPreset(2000)">快速</div>
+                <div class="preset-btn active" onclick="setPreset(5000)">标准</div>
+                <div class="preset-btn" onclick="setPreset(20000)">大师</div>
+            </div>
+        </div>
+        <div class="start-group">
+            <div class="start-label">
+                <span>💥 初始子弹数</span>
+                <span class="start-value" id="startInitBulletsVal">20</span>
+            </div>
+            <input type="range" class="start-slider" id="startInitBullets" min="5" max="100" step="5" value="20">
+            <div class="start-presets">
+                <div class="preset-btn" onclick="setBulletPreset('init',10)">10</div>
+                <div class="preset-btn active" onclick="setBulletPreset('init',20)">20</div>
+                <div class="preset-btn" onclick="setBulletPreset('init',50)">50</div>
+                <div class="preset-btn" onclick="setBulletPreset('init',80)">80</div>
+            </div>
+        </div>
+        <div class="start-group">
+            <div class="start-label">
+                <span>🔥 最大子弹数</span>
+                <span class="start-value" id="startMaxBulletsVal">100</span>
+            </div>
+            <input type="range" class="start-slider" id="startMaxBullets" min="20" max="300" step="10" value="100">
+            <div class="start-presets">
+                <div class="preset-btn" onclick="setBulletPreset('max',50)">50</div>
+                <div class="preset-btn active" onclick="setBulletPreset('max',100)">100</div>
+                <div class="preset-btn" onclick="setBulletPreset('max',200)">200</div>
+                <div class="preset-btn" onclick="setBulletPreset('max',300)">300</div>
+            </div>
+        </div>
+        <div class="start-group" id="loadGroup" style="display:none;">
+            <div class="start-label" style="justify-content:center;border-top:1px solid #374151;padding-top:16px;">
+                <span>💾 发现存档</span>
+            </div>
+            <div style="font-size:12px;color:#9ca3af;text-align:center;margin:8px 0;line-height:1.6;" id="saveInfo"></div>
+            <button class="start-btn" onclick="continueGame()" style="background:#8b5cf6;margin-top:8px;">▶ 继续训练</button>
+            <button class="start-btn" onclick="deleteSaveAndRestart()" style="background:#ef4444;margin-top:8px;font-size:14px;">🗑 删除存档并重新训练</button>
+        </div>
+        <button class="start-btn" id="btnStartTrain" onclick="startGame()">▶ 开始训练</button>
+        <div class="start-info">
+            💡 <b>状态空间</b>：81弹幕×9墙位 = 729种<br>
+            💡 <b>难度递增</b>：子弹数量随时间增加<br>
+            💡 <b>手机建议</b>：5000 回合（约 3-5 秒）<br>
+            💡 <b>电脑建议</b>：20000 回合（约 1-2 秒）
+        </div>
+    </div>
+</div>
+
+<div class="container" id="gameUI" style="display:none;">
+    <div class="game-container">
+        <canvas id="game"></canvas>
+        <div class="death-flash" id="deathFlash"></div>
+        <div class="pretrain-overlay hidden" id="pretrainOverlay">
+            <div class="pretrain-title"><div class="pretrain-spinner"></div><span>AI 训练中</span></div>
+            <div class="pretrain-subtitle">正在学会躲避子弹...</div>
+            <div class="pretrain-progress"><div class="pretrain-bar" id="pretrainBar"></div></div>
+            <div class="pretrain-stats" id="pretrainStats">回合: 0 / 5000<br>最高存活: 0 帧</div>
+            <button class="pretrain-skip" onclick="skipPretrain()">跳过 ▶</button>
+        </div>
+        <div class="training-indicator" id="trainingIndicator"><div class="pulse"></div><span>训练中</span></div>
+        <button class="settings-toggle" onclick="toggleSettings()">⚙️</button>
+        <div class="scoreboard">
+            <div class="score-item"><div class="score-label">存活</div><div class="score-value" id="score">0</div></div>
+            <div class="score-item episode"><div class="score-label">回合</div><div class="episode-value" id="episode">0</div></div>
+            <div class="best-score"><div class="score-label">🏆 最高</div><div class="score-value" id="bestScore">0</div></div>
+        </div>
+        <div class="difficulty-bar"><div class="difficulty-fill" id="difficultyFill" style="width:0%"></div></div>
+        <div class="controls">
+            <button class="btn btn-primary" id="btnTrain" onclick="toggleTraining()">⏸ 暂停</button>
+            <button class="btn btn-secondary" onclick="resetGame()">🔄 重置</button>
+            <button class="btn btn-secondary" onclick="saveAI()">💾 保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSettings()"></div>
+<div class="settings-panel" id="settingsPanel">
+    <div class="settings-header"><div class="settings-title">⚙️ 训练设置</div><button class="close-btn" onclick="toggleSettings()">✕</button></div>
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">探索率</div><div class="stat-value" id="mEps">0.30</div></div>
+        <div class="stat-card"><div class="stat-label">权重数</div><div class="stat-value" id="mQ">72</div></div>
+        <div class="stat-card"><div class="stat-label">子弹数量</div><div class="stat-value" id="mBullets">0</div></div>
+        <div class="stat-card"><div class="stat-label">本局帧数</div><div class="stat-value" id="mFrames">0</div></div>
+    </div>
+    <div class="setting-group"><div class="setting-label"><span>训练速度</span><span class="setting-value" id="vSpeed">5x</span></div><input type="range" id="speed" min="1" max="50" step="1" value="5"></div>
+    <div class="setting-group"><div class="setting-label"><span>子弹密度</span><span class="setting-value" id="vDensity">100%</span></div><input type="range" id="density" min="20" max="200" step="10" value="100"></div>
+    <div class="setting-group"><div class="setting-label"><span>子弹速度</span><span class="setting-value" id="vBulletSpeed">100%</span></div><input type="range" id="bulletSpeedMul" min="50" max="200" step="10" value="100"></div>
+    <div class="setting-group"><div class="setting-label"><span>初始子弹数</span><span class="setting-value" id="vInitBullets">20</span></div><input type="range" id="initBullets" min="5" max="100" step="5" value="20"></div>
+    <div class="setting-group"><div class="setting-label"><span>最大子弹数</span><span class="setting-value" id="vMaxBullets">100</span></div><input type="range" id="maxBullets" min="20" max="300" step="10" value="100"></div>
+    <button class="btn btn-danger" onclick="resetAI()">🧠 重置AI学习</button>
+    <div class="log-container" id="log"></div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() {
+    const container = canvas.parentElement;
+    const maxWidth = Math.min(container.clientWidth - 20, 600);
+    canvas.width = maxWidth;
+    canvas.height = maxWidth * 3 / 4;
+}
+const W = () => canvas.width;
+const H = () => canvas.height;
+
+const CONFIG = {
+    planeRadius: 9,
+    bulletRadius: 2.5,
+    planeSpeed: 8,
+    bulletSpeed: 1.8,
+    alpha: 0.5,
+    gamma: 0.98,
+    epsilon: 0.5,
+    speed: 5,
+    pretrainEpisodes: 5000,
+    maxFramesPerEpisode: 3000,
+    initialBullets: 12,
+    maxBullets: 80,
+    density: 1.0,
+    bulletSpeedMul: 1.0
+};
+
+let game = {
+    plane: { x: 0, y: 0 },
+    bullets: [],
+    episode: 0,
+    frames: 0,
+    bestFrames: 0,
+    training: true,
+    pretraining: false,
+    pretrainTarget: 0,
+    lastDangerCount: 0,
+    spawnTimer: 0,
+    difficulty: 0,
+    deathFlashTimer: 0
+};
+
+let pretrainSkip = false;
+
+function initPositions() {
+    game.plane.x = W() / 2;
+    game.plane.y = H() / 2;
+}
+
+function resetBullets() {
+    game.bullets = [];
+    game.spawnTimer = 0;
+}
+
+function spawnBullet() {
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+    if (side === 0) { x = Math.random() * W(); y = -10; }
+    else if (side === 1) { x = W() + 10; y = Math.random() * H(); }
+    else if (side === 2) { x = Math.random() * W(); y = H() + 10; }
+    else { x = -10; y = Math.random() * H(); }
+
+    const targetX = game.plane.x + (Math.random() - 0.5) * W() * 0.5;
+    const targetY = game.plane.y + (Math.random() - 0.5) * H() * 0.5;
+    const angle = Math.atan2(targetY - y, targetX - x);
+    const speed = CONFIG.bulletSpeed * CONFIG.bulletSpeedMul * (0.7 + Math.random() * 0.6);
+    game.bullets.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed
+    });
+}
+
+function spawnBurst() {
+    const cx = Math.random() * W();
+    const cy = Math.random() * H();
+    const n = 4 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < n; i++) {
+        const a = (Math.PI * 2 / n) * i + (Math.random() - 0.5) * 0.4;
+        const spd = CONFIG.bulletSpeed * CONFIG.bulletSpeedMul * (0.5 + Math.random() * 0.5);
+        game.bullets.push({x: cx, y: cy, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd});
+    }
+}
+
+function updateBullets() {
+    const maxBullets = Math.min(CONFIG.maxBullets, CONFIG.initialBullets + Math.floor(game.frames / 30));
+    const intensity = Math.min(3, 1 + game.frames / 300);
+
+    if (game.bullets.length < maxBullets) {
+        for (let i = 0; i < Math.floor(0.8 * CONFIG.density * intensity); i++) {
+            spawnBullet();
+        }
+        if (Math.random() < 0.15 * CONFIG.density * intensity) {
+            spawnBurst();
+        }
+    }
+
+    for (let i = game.bullets.length - 1; i >= 0; i--) {
+        const b = game.bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.x < -50 || b.x > W() + 50 || b.y < -50 || b.y > H() + 50) {
+            game.bullets.splice(i, 1);
+        }
+    }
+}
+
+function getState() {
+    const p = game.plane;
+    let u = 0, d = 0, l = 0, r = 0;
+    for (const b of game.bullets) {
+        const dx = b.x - p.x;
+        const dy = b.y - p.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 200) {
+            const dot = dx * b.vx + dy * b.vy;
+            if (dot >= 0) continue;
+            const threat = dist < 80 ? 2 : 1;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 0 && threat > r) r = threat;
+                else if (threat > l) l = threat;
+            } else {
+                if (dy > 0 && threat > d) d = threat;
+                else if (threat > u) u = threat;
+            }
+        }
+    }
+    const base = u * 27 + d * 9 + l * 3 + r;
+    const m = CONFIG.planeRadius + 15;
+    const wx = p.x < m + 50 ? 0 : p.x > W() - m - 50 ? 2 : 1;
+    const wy = p.y < m + 50 ? 0 : p.y > H() - m - 50 ? 2 : 1;
+    return base * 9 + wx * 3 + wy;
+}
+
+function countThreats(state) {
+    const base = Math.floor(state / 9);
+    const u = Math.floor(base / 27) % 3;
+    const d = Math.floor(base / 9) % 3;
+    const l = Math.floor(base / 3) % 3;
+    const r = base % 3;
+    return (u > 0 ? 1 : 0) + (d > 0 ? 1 : 0) + (l > 0 ? 1 : 0) + (r > 0 ? 1 : 0);
+}
+
+class DodgeAI {
+    constructor() {
+        this.epsilon = 0.3;
+        this.weights = new Float64Array(72);
+        this.history = [];
+    }
+
+    simulate(action, plane) {
+        const t = {x: plane.x, y: plane.y};
+        const d = CONFIG.planeSpeed, diag = d * 0.7071;
+        switch(action) {
+            case 0: t.y -= d; break;
+            case 1: t.y += d; break;
+            case 2: t.x -= d; break;
+            case 3: t.x += d; break;
+            case 4: t.x -= diag; t.y -= diag; break;
+            case 5: t.x += diag; t.y -= diag; break;
+            case 6: t.x -= diag; t.y += diag; break;
+            case 7: t.x += diag; t.y += diag; break;
+        }
+        t.x = Math.max(CONFIG.planeRadius, Math.min(W() - CONFIG.planeRadius, t.x));
+        t.y = Math.max(CONFIG.planeRadius, Math.min(H() - CONFIG.planeRadius, t.y));
+        return t;
+    }
+
+    evaluate(pos) {
+        let score = 0;
+        for (const b of game.bullets) {
+            const dx = b.x - pos.x, dy = b.y - pos.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 250) continue;
+            const dot = dx * b.vx + dy * b.vy;
+            if (dot < 0) score -= 3000 / (dist + 5);
+        }
+        const wm = CONFIG.planeRadius + 25;
+        if (pos.x < wm) score -= 500;
+        if (pos.x > W() - wm) score -= 500;
+        if (pos.y < wm) score -= 500;
+        if (pos.y > H() - wm) score -= 500;
+        return score;
+    }
+
+    getFeatures(pos) {
+        const f = new Array(8).fill(0);
+        for (const b of game.bullets) {
+            const dx = b.x - pos.x, dy = b.y - pos.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 150) continue;
+            const dot = dx * b.vx + dy * b.vy;
+            if (dot >= 0) continue;
+            let dir = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8;
+            if (dir < 0) dir += 8;
+            f[dir] = 1;
+        }
+        return f;
+    }
+
+    chooseAction() {
+        if (Math.random() < this.epsilon) return Math.floor(Math.random() * 9);
+        const p = game.plane;
+        let best = -Infinity, bestA = 0;
+        for (let a = 0; a < 9; a++) {
+            const t = this.simulate(a, p);
+            let s = this.evaluate(t);
+            const f = this.getFeatures(t);
+            for (let i = 0; i < 8; i++) s += this.weights[i * 9 + a] * f[i];
+            if (s > best) { best = s; bestA = a; }
+        }
+        return bestA;
+    }
+
+    executeAction(action, plane) {
+        const d = CONFIG.planeSpeed, diag = d * 0.7071;
+        switch(action) {
+            case 0: plane.y -= d; break;
+            case 1: plane.y += d; break;
+            case 2: plane.x -= d; break;
+            case 3: plane.x += d; break;
+            case 4: plane.x -= diag; plane.y -= diag; break;
+            case 5: plane.x += diag; plane.y -= diag; break;
+            case 6: plane.x -= diag; plane.y += diag; break;
+            case 7: plane.x += diag; plane.y += diag; break;
+        }
+        const m = CONFIG.planeRadius;
+        const cx = Math.max(m, Math.min(W() - m, plane.x));
+        const cy = Math.max(m, Math.min(H() - m, plane.y));
+        const hitWall = cx !== plane.x || cy !== plane.y;
+        plane.x = cx;
+        plane.y = cy;
+        return hitWall;
+    }
+
+    record(action) {
+        const t = this.simulate(action, game.plane);
+        this.history.push({f: this.getFeatures(t), a: action});
+        if (this.history.length > 40) this.history.shift();
+    }
+
+    finalLearn(reward) {
+        const mag = Math.sign(reward) * Math.min(1, Math.abs(reward) / 5);
+        for (const h of this.history) {
+            for (let i = 0; i < 8; i++) {
+                if (h.f[i] > 0) this.weights[i * 9 + h.a] += 0.05 * mag;
+            }
+        }
+        this.history = [];
+        this.epsilon = Math.max(0.01, this.epsilon * 0.9995);
+    }
+
+    reset() { this.weights = new Float64Array(72); this.history = []; this.epsilon = 0.3; }
+}
+
+const ai = new DodgeAI();
+
+function checkHit() {
+    const p = game.plane;
+    const minDist = CONFIG.planeRadius + CONFIG.bulletRadius;
+    for (const b of game.bullets) {
+        if (Math.hypot(b.x - p.x, b.y - p.y) < minDist) return true;
+    }
+    return false;
+}
+
+function updateOnce() {
+    const action = ai.chooseAction();
+    const hitWall = ai.executeAction(action, game.plane);
+    ai.record(action);
+    updateBullets();
+    game.frames++;
+
+    const hit = checkHit();
+    let reward = 0.01;
+    if (hitWall) reward -= 0.5;
+
+    let episodeEnd = false;
+    if (hit) { reward = -1000; episodeEnd = true; }
+    if (game.frames >= CONFIG.maxFramesPerEpisode) { reward += 100; episodeEnd = true; }
+
+    if (episodeEnd) {
+        ai.finalLearn(reward);
+        if (game.frames > game.bestFrames) game.bestFrames = game.frame;
+        game.episode++;
+        initPositions();
+        resetBullets();
+        game.frames = 0;
+        game.deathFlashTimer = hit ? 6 : 0;
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W(), H());
+
+    ctx.strokeStyle = '#1a1f2e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 8]);
+    for (let x = 0; x < W(); x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H()); ctx.stroke();
+    }
+    for (let y = 0; y < H(); y += 60) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W(), y); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    for (const b of game.bullets) {
+        const dx = b.x - game.plane.x;
+        const dy = b.y - game.plane.y;
+        const dist = Math.hypot(dx, dy);
+        const danger = Math.max(0, 1 - dist / 300);
+        const alpha = 0.4 + danger * 0.6;
+
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, CONFIG.bulletRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, CONFIG.bulletRadius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(239, 68, 68, ${alpha * 0.15})`;
+        ctx.fill();
+
+        const trailLen = 8;
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(b.x - b.vx * trailLen, b.y - b.vy * trailLen);
+        ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.3})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    const p = game.plane;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.beginPath();
+    ctx.moveTo(0, -CONFIG.planeRadius * 1.4);
+    ctx.lineTo(-CONFIG.planeRadius * 0.9, CONFIG.planeRadius * 0.8);
+    ctx.lineTo(0, CONFIG.planeRadius * 0.3);
+    ctx.lineTo(CONFIG.planeRadius * 0.9, CONFIG.planeRadius * 0.8);
+    ctx.closePath();
+    ctx.fillStyle = '#38bdf8';
+    ctx.fill();
+    ctx.strokeStyle = '#7dd3fc';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    game.difficulty = Math.min(100, (game.bullets.length / CONFIG.maxBullets) * 100);
+    document.getElementById('difficultyFill').style.width = game.difficulty + '%';
+}
+
+function gameLoop() {
+    if (game.deathFlashTimer > 0) {
+        document.getElementById('deathFlash').classList.add('show');
+        game.deathFlashTimer--;
+    } else {
+        document.getElementById('deathFlash').classList.remove('show');
+    }
+
+    if (!game.pretraining) {
+        if (game.training) {
+            for (let i = 0; i < CONFIG.speed; i++) updateOnce();
+        }
+        draw();
+        document.getElementById('score').textContent = game.frames;
+        document.getElementById('episode').textContent = game.episode;
+        document.getElementById('bestScore').textContent = game.bestFrames;
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+function toggleTraining() {
+    game.training = !game.training;
+    const btn = document.getElementById('btnTrain');
+    const ind = document.getElementById('trainingIndicator');
+    if (game.training) { btn.textContent = '⏸ 暂停'; btn.classList.replace('btn-primary', 'btn-secondary'); ind.classList.add('show'); }
+    else { btn.textContent = '▶ 继续'; btn.classList.replace('btn-secondary', 'btn-primary'); ind.classList.remove('show'); }
+}
+
+function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('show'); document.getElementById('overlay').classList.toggle('show'); }
+
+function resetGame() {
+    game.episode = 0;
+    game.bestFrames = 0;
+    game.frames = 0;
+    initPositions();
+    resetBullets();
+    document.getElementById('score').textContent = '0';
+    document.getElementById('episode').textContent = '0';
+    document.getElementById('bestScore').textContent = '0';
+    draw();
+    addLog('🔄 重置统计');
+}
+
+function resetAI() {
+    ai.reset();
+    deleteSave();
+    addLog('🧠 AI已清空');
+    toggleSettings();
+}
+
+function addLog(msg) {
+    const log = document.getElementById('log');
+    log.innerHTML = `<div class="log-item">[${new Date().toLocaleTimeString()}] ${msg}</div>` + log.innerHTML;
+    if (log.children.length > 20) log.removeChild(log.lastChild);
+}
+
+const SAVE_KEY = 'ai_dodge_v1';
+
+function saveAI() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({w: Array.from(ai.weights), eps: ai.epsilon, ep: game.episode, best: game.bestFrames})); addLog('💾 已保存'); }
+    catch(e) { addLog('⚠️ 保存失败'); }
+}
+function loadAI() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY); if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (data.w) ai.weights = new Float64Array(data.w);
+        ai.epsilon = data.eps ?? 0.3;
+        game.episode = data.ep || 0; game.bestFrames = data.best || 0; return true;
+    } catch(e) { return false; }
+}
+
+function hasSave() { return localStorage.getItem(SAVE_KEY) !== null; }
+function deleteSave() { localStorage.removeItem(SAVE_KEY); }
+
+function runPretrain() {
+    const batchSize = /Mobi|Android/i.test(navigator.userAgent) ? 800 : 3000;
+    function runBatch() {
+        if (pretrainSkip) { finishPretrain(); return; }
+        const startTime = performance.now();
+        for (let i = 0; i < batchSize; i++) {
+            updateOnce();
+            if (game.episode >= game.pretrainTarget) { finishPretrain(); return; }
+        }
+        updatePretrainUI();
+        setTimeout(runBatch, performance.now() - startTime < 16 ? 0 : 4);
+    }
+    runBatch();
+}
+
+function updatePretrainUI() {
+    const progress = Math.min(100, (game.episode / game.pretrainTarget) * 100);
+    document.getElementById('pretrainBar').style.width = progress + '%';
+    document.getElementById('pretrainStats').innerHTML =
+        `回合: ${game.episode} / ${game.pretrainTarget}<br>最高存活: ${game.bestFrames} 帧<br>权重: 72`;
+}
+
+function finishPretrain() {
+    game.pretraining = false;
+    document.getElementById('pretrainOverlay').classList.add('hidden');
+    game.episode = 0;
+    game.bestFrames = 0;
+    game.frames = 0;
+    initPositions();
+    resetBullets();
+    draw();
+    addLog(`✅ 预训练完成！AI已学会躲避`);
+    addLog(`💡 72个权重 + 前瞻评估`);
+    game.training = true;
+    document.getElementById('btnTrain').textContent = '⏸ 暂停';
+    document.getElementById('btnTrain').classList.replace('btn-primary', 'btn-secondary');
+    document.getElementById('trainingIndicator').classList.add('show');
+    saveAI();
+}
+
+function skipPretrain() { pretrainSkip = true; }
+
+function startGame(skipTrain) {
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameUI').style.display = 'flex';
+    if (skipTrain) {
+        loadAI();
+        addLog(`🎮 加载存档，继续训练`);
+        finishPretrain();
+    } else {
+        CONFIG.initialBullets = parseInt(document.getElementById('startInitBullets').value);
+        CONFIG.maxBullets = parseInt(document.getElementById('startMaxBullets').value);
+        document.getElementById('initBullets').value = CONFIG.initialBullets;
+        document.getElementById('maxBullets').value = CONFIG.maxBullets;
+        document.getElementById('vInitBullets').textContent = CONFIG.initialBullets;
+        document.getElementById('vMaxBullets').textContent = CONFIG.maxBullets;
+        resizeCanvas();
+        initPositions();
+        resetBullets();
+        addLog('🎮 启动躲避子弹 (前瞻+强化)');
+        if (CONFIG.pretrainEpisodes > 0) {
+            game.pretraining = true;
+            game.pretrainTarget = CONFIG.pretrainEpisodes;
+            document.getElementById('pretrainOverlay').classList.remove('hidden');
+            addLog(`🧠 预训练 ${CONFIG.pretrainEpisodes} 回合...`);
+            runPretrain();
+        } else { finishPretrain(); }
+    }
+    requestAnimationFrame(gameLoop);
+    setInterval(() => {
+        document.getElementById('mEps').textContent = ai.epsilon.toFixed(2);
+        document.getElementById('mQ').textContent = 72;
+        document.getElementById('mBullets').textContent = game.bullets.length;
+        document.getElementById('mFrames').textContent = game.frames;
+    }, 500);
+}
+
+function continueGame() { startGame(true); }
+
+function deleteSaveAndRestart() {
+    deleteSave();
+    document.getElementById('loadGroup').style.display = 'none';
+    document.getElementById('btnStartTrain').textContent = '▶ 开始训练';
+    addLog('🗑 存档已删除');
+    startGame(false);
+}
+
+document.getElementById('startPretrain').addEventListener('input', function() {
+    CONFIG.pretrainEpisodes = parseInt(this.value);
+    document.getElementById('startPretrainVal').textContent = this.value;
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+});
+
+function setPreset(val) {
+    CONFIG.pretrainEpisodes = val;
+    document.getElementById('startPretrain').value = val;
+    document.getElementById('startPretrainVal').textContent = val;
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if ((btn.textContent === '跳过' && val === 0) || parseInt(btn.textContent.replace('快速','2000').replace('标准','5000').replace('大师','20000')) === val) btn.classList.add('active');
+    });
+}
+
+document.getElementById('speed').addEventListener('input', function() { CONFIG.speed = parseInt(this.value); document.getElementById('vSpeed').textContent = this.value + 'x'; });
+document.getElementById('density').addEventListener('input', function() { CONFIG.density = parseInt(this.value) / 100; document.getElementById('vDensity').textContent = this.value + '%'; });
+document.getElementById('bulletSpeedMul').addEventListener('input', function() { CONFIG.bulletSpeedMul = parseInt(this.value) / 100; document.getElementById('vBulletSpeed').textContent = this.value + '%'; });
+document.getElementById('initBullets').addEventListener('input', function() { CONFIG.initialBullets = parseInt(this.value); document.getElementById('vInitBullets').textContent = this.value; });
+document.getElementById('maxBullets').addEventListener('input', function() { CONFIG.maxBullets = parseInt(this.value); document.getElementById('vMaxBullets').textContent = this.value; });
+
+document.getElementById('startInitBullets').addEventListener('input', function() {
+    CONFIG.initialBullets = parseInt(this.value);
+    document.getElementById('startInitBulletsVal').textContent = this.value;
+});
+document.getElementById('startMaxBullets').addEventListener('input', function() {
+    CONFIG.maxBullets = parseInt(this.value);
+    document.getElementById('startMaxBulletsVal').textContent = this.value;
+});
+function setBulletPreset(type, val) {
+    if (type === 'init') {
+        CONFIG.initialBullets = val;
+        document.getElementById('startInitBullets').value = val;
+        document.getElementById('startInitBulletsVal').textContent = val;
+    } else {
+        CONFIG.maxBullets = val;
+        document.getElementById('startMaxBullets').value = val;
+        document.getElementById('startMaxBulletsVal').textContent = val;
+    }
+}
+
+if (hasSave()) {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        const data = JSON.parse(raw);
+        document.getElementById('saveInfo').textContent = `已训练 ${data.ep || 0} 回合，最高存活 ${data.best || 0} 帧`;
+        document.getElementById('loadGroup').style.display = 'block';
+        document.getElementById('btnStartTrain').textContent = '🔄 重新训练';
+    } catch(e) {}
+}
+
+window.addEventListener('resize', () => { if (!game.pretraining) { resizeCanvas(); } });
+</script>
+</body>
+</html>

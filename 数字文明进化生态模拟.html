@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>数字文明 · 进化生态模拟</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#060a12;color:#e5e7eb;font-family:"Microsoft YaHei",system-ui,sans-serif;user-select:none}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair}
+#top{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 10px;background:rgba(17,24,39,0.92);border-bottom:1px solid #1e293b;backdrop-filter:blur(8px);flex-wrap:wrap;font-size:10px;min-height:34px}
+#top .t{color:#10b981;font-weight:bold;font-size:13px;letter-spacing:1px}
+.st{text-align:center;font-family:monospace}
+.sl{font-size:7px;color:#6b7280}
+.sv{font-size:13px;font-weight:bold}
+#pnl{position:absolute;top:38px;right:5px;z-index:10;width:320px;max-height:calc(100vh-46px);overflow-y:auto;background:rgba(17,24,39,0.92);border:1px solid #1e293b;border-radius:10px;padding:8px 10px;backdrop-filter:blur(8px)}
+#pnl h3{font-size:11px;color:#10b981;margin:6px 0 4px;border-bottom:1px solid #1e293b;padding-bottom:2px}
+#pnl h3:first-child{margin-top:0}
+.cr{display:flex;align-items:center;justify-content:space-between;margin:2px 0;font-size:11px}
+.cr label{color:#9ca3af;flex:1}
+.cr input{width:90px;accent-color:#10b981;height:13px;cursor:pointer}
+.cr span{width:28px;text-align:right;font-family:monospace;font-size:10px;color:#e5e7eb}
+button{background:#10b981;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:600;font-size:10px}
+button:hover{filter:brightness(1.2)}
+#log{max-height:70px;overflow-y:auto;font-size:9px;color:#9ca3af;font-family:monospace;line-height:1.3;background:#060a14;border-radius:4px;padding:3px 5px;border:1px solid #1e293b;margin-top:2px}
+#log::-webkit-scrollbar{width:3px}#log::-webkit-scrollbar-thumb{background:#374151;border-radius:2px}
+#slist{font-size:9px;color:#9ca3af;font-family:monospace;max-height:70px;overflow-y:auto;margin-top:2px;background:#060a14;border-radius:3px;padding:2px}
+#popup{position:absolute;top:48%;left:50%;z-index:20;transform:translate(-50%,-50%);background:rgba(0,0,0,0.93);border:2px solid #10b981;border-radius:14px;padding:14px 24px;text-align:center;pointer-events:none;opacity:0;transition:opacity .6s}
+#popup.show{opacity:1}#popup h2{color:#10b981;font-size:17px;margin-bottom:3px}#popup p{color:#9ca3af;font-size:11px}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="top">
+  <span class="t">🌍 数字文明</span>
+  <div class="st"><div class="sl">生物</div><div class="sv" id="vPop" style="color:#ffd43b">0</div></div>
+  <div class="st"><div class="sl">🌿/🥩</div><div class="sv" id="vDiet" style="color:#ffd43b">0/0</div></div>
+  <div class="st"><div class="sl">世代</div><div class="sv" id="vGen" style="color:#3b82f6">1</div></div>
+  <div class="st"><div class="sl">最高分</div><div class="sv" id="vBest" style="color:#10b981">0</div></div>
+  <div class="st"><div class="sl">物种</div><div class="sv" id="vSp" style="color:#fbbf24">0</div></div>
+  <div class="st"><div class="sl">基因</div><div class="sv" id="vGenome" style="color:#a78bfa">0</div></div>
+  <div class="st"><div class="sl">城市</div><div class="sv" id="vCity" style="color:#4dabf7">0</div></div>
+  <div class="st"><div class="sl" id="vDay">☀</div><div class="sv" id="vSpeed">1x</div></div>
+</div>
+
+<div id="pnl">
+  <h3>环境</h3>
+  <div class="cr"><label>🌡 温度</label><input type="range" id="cTemp" min="0" max="100" value="50"><span id="dTemp">50</span></div>
+  <div class="cr"><label>🌿 植物</label><input type="range" id="cPlant" min="5" max="150" value="50"><span id="dPlant">50</span></div>
+  <div class="cr"><label>🧬 变异率</label><input type="range" id="cMut" min="1" max="40" value="8"><span id="dMut">8%</span></div>
+  <div class="cr"><label>🏙 引力</label><input type="range" id="cGrav" min="0" max="100" value="30"><span id="dGrav">30%</span></div>
+  <div class="cr"><label>⚡ 速度</label><input type="range" id="cSpeed" min="1" max="50" value="1"><span id="dSpeed">1x</span></div>
+  <h3>生态 <span style="font-size:10px;color:#9ca3af">🌿<b id="dHerb" style="color:#10b981">0</b> 🥩<b id="dCarn" style="color:#ef4444">0</b> 🍖<b id="dOmni" style="color:#fbbf24">0</b></span></h3>
+  <div id="slist"><div style="color:#6b7280">等待...</div></div>
+  <h3>日志</h3>
+  <div id="log"><div style="color:#6b7280">启动中...</div></div>
+  <h3>操作</h3>
+  <div style="display:flex;gap:3px;flex-wrap:wrap">
+    <button onclick="resetSim()">🔄 重置</button>
+    <button onclick="injectLife()">🌱 注入</button>
+    <button onclick="togglePause()" id="btnPause">⏸</button>
+    <button onclick="this.parentElement.parentElement.classList.toggle('hidden')">✖</button>
+  </div>
+</div>
+
+<div id="popup"><h2 id="popT">🌍 里程碑</h2><p id="popD">数字文明演化</p></div>
+
+<script>
+try{
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+var W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,2);
+cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);
+
+// ─── Config ───
+var CFG={food:60,mut:0.08,grav:0.3,speed:1,temp:50,
+  POP:250,PE:25,ME:45,MET:0.04,DIV:70,MAXAGE:5000,PR:1.3};
+
+// ─── State ───
+var orgs=[],foods=[],corpses=[],msgs=[],nid=1;
+var cx2={x:W/2,y:H/2};
+var gen=1,bfit=0,borns=0,spn=0,fi=0,paused=false,dayT=0,cDay=true;
+var mile={};
+
+// ─── Terrain cache ───
+var tdata=[],tcan=null;
+function buildTerrain(){
+  var cols=Math.ceil(W/40)+1,rows=Math.ceil(H/40)+1;
+  var clr=['#1a3a1a','#0d2818','#3a2a0a','#0a1a3a'];
+  tdata=[];tcan=document.createElement('canvas');tcan.width=W;tcan.height=H;
+  var tc=tcan.getContext('2d');
+  for(var y=0;y<rows;y++){tdata[y]=[];for(var x=0;x<cols;x++){tdata[y][x]=Math.floor(Math.random()*4);tc.fillStyle=clr[tdata[y][x]];tc.fillRect(x*40,y*40,40,40);}}
+}
+function getT(x,y){var c=Math.floor(x/40),r=Math.floor(y/40);if(tdata[r]&&tdata[r][c]!==undefined)return tdata[r][c];return 0;}
+
+// ─── UI helpers ───
+function $(id){return document.getElementById(id);}
+function addLog(m){var l=$('log'),d=new Date(),t=String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');l.innerHTML='<div>['+t+'] '+m+'</div>'+l.innerHTML;if(l.children>20)l.removeChild(l.lastChild);}
+function showM(t,d){$('popT').textContent=t;$('popD').textContent=d||'';$('popup').classList.add('show');setTimeout(function(){$('popup').classList.remove('show');},2500);}
+
+// ─── Messages ───
+function bcast(o,t){msgs.push({x:o.x,y:o.y,t:t,o:o,l:80});}
+function upMsg(){for(var i=msgs.length-1;i>=0;i--){msgs[i].l--;msgs[i].y-=0.12;if(msgs[i].l<=0)msgs.splice(i,1);}}
+
+// ─── Food ───
+function spawnF(n){for(var i=0;i<n;i++){if(getT(20+Math.random()*(W-40),20+Math.random()*(H-40))!==3)foods.push({x:cx2.x+(Math.random()-0.5)*600,y:cx2.y+(Math.random()-0.5)*600});}}
+function growF(){if(Math.random()<0.25&&foods.length<CFG.food&&getT(20+Math.random()*(W-40),20+Math.random()*(H-40))!==3)foods.push({x:cx2.x+(Math.random()-0.5)*700,y:cx2.y+(Math.random()-0.5)*700});}
+
+// ─── Grid (optimization) ───
+var grid=[],GS=60;
+function reGrid(){
+  grid=[];var cols=Math.ceil(W/GS)+2,rows=Math.ceil(H/GS)+2;
+  for(var y=0;y<rows;y++){grid[y]=[];for(var x=0;x<cols;x++)grid[y][x]=[];}
+  for(var i=0;i<orgs.length;i++){var o=orgs[i];if(!o.alive)continue;var gx=Math.floor(o.x/GS),gy=Math.floor(o.y/GS);if(grid[gy]&&grid[gy][gx])grid[gy][gx].push(o);}
+}
+function near(x,y,r){
+  var res=[];
+  var minX=Math.max(0,Math.floor((x-r)/GS)),maxX=Math.min(grid[0]?grid[0].length-1:0,Math.floor((x+r)/GS));
+  var minY=Math.max(0,Math.floor((y-r)/GS)),maxY=Math.min(grid.length-1,Math.floor((y+r)/GS));
+  for(var gy=minY;gy<=maxY;gy++){for(var gx=minX;gx<=maxX;gx++){
+    var cell=grid[gy]?grid[gy][gx]:null;if(!cell)continue;
+    for(var k=0;k<cell.length;k++){var o=cell[k];if(o.alive&&Math.hypot(o.x-x,o.y-y)<r)res.push(o);}
+  }}
+  return res;
+}
+
+// ─── Creature ───
+var ccol={};
+function gCol(id){if(ccol[id])return ccol[id];var h=(id*137.508)%360;ccol[id]=h;return h;}
+function dCol(d){if(d===0)return'#10b981';if(d===1)return'#ef4444';if(d===2)return'#fbbf24';return'#9775fa';}
+
+var NN=function(g){
+  this.n={};this.c=[];this.ii=[];this.oi=[];
+  if(g)this.fg(g);
+};
+NN.prototype={
+  fg:function(g){
+    var p=0,nN=Math.floor(g[p++]||4),nC=Math.floor(g[p++]||0);
+    this.n={};this.c=[];
+    for(var i=0;i<nN;i++){var id=Math.floor(g[p++]||i),ty=Math.floor(g[p++]||1),b=g[p++]||0;this.n[id]={b:b,a:0};if(ty===0)this.ii.push(id);else if(ty===2)this.oi.push(id);}
+    for(var i=0;i<nC;i++){var f=Math.floor(g[p++]||0),t=Math.floor(g[p++]||0),w=g[p++]||0,e=g[p++]||1;this.c.push({f:f,t:t,w:w,e:!!e});}
+    if(this.ii.length<5){for(var i=0;i<5;i++){this.n[100+i]={b:0,a:0};this.ii.push(100+i);}}
+    if(this.oi.length<3){for(var i=0;i<3;i++){this.n[200+i]={b:0,a:0};this.oi.push(200+i);}}
+  },
+  act:function(inp){
+    for(var i=0;i<this.ii.length&&i<inp.length;i++){var id=this.ii[i];if(this.n[id])this.n[id].a=Math.max(-1,Math.min(1,inp[i]||0));}
+    var hid=[];for(var k in this.n){var id=parseInt(k);if(this.ii.indexOf(id)<0&&this.oi.indexOf(id)<0)hid.push(id);}
+    for(var it=0;it<3;it++)for(var h=0;h<hid.length;h++){var id=hid[h],s=this.n[id]?this.n[id].b:0;for(var ci=0;ci<this.c.length;ci++){var c=this.c[ci];if(c.e&&c.t===id)s+=(this.n[c.f]?this.n[c.f].a:0)*c.w;}if(this.n[id])this.n[id].a=Math.tanh(s);}
+    var out=[];for(var i=0;i<this.oi.length;i++){var id=this.oi[i],s=this.n[id]?this.n[id].b:0;for(var ci=0;ci<this.c.length;ci++){var c=this.c[ci];if(c.e&&c.t===id)s+=(this.n[c.f]?this.n[c.f].a:0)*c.w;}out.push(Math.tanh(s));}
+    return out;
+  }
+};
+
+function rndG(){
+  var g=[];g.push(8);g.push(12);
+  for(var i=0;i<5;i++){g.push(100+i);g.push(0);g.push(Math.random()*0.2-0.1);}
+  for(var i=0;i<3;i++){g.push(200+i);g.push(2);g.push(Math.random()*0.2-0.1);}
+  for(var i=0;i<5;i++)for(var o=0;o<3;o++){g.push(100+i);g.push(200+o);g.push(Math.random()*2-1);g.push(1);}
+  return g;
+}
+
+var Org=function(x,y,g,pGen,dt){
+  this.id=nid++;this.x=x;this.y=y;this.vx=0;this.vy=0;
+  this.a=Math.random()*Math.PI*2;this.r=5;this.en=CFG.DIV*0.6;
+  this.alive=true;this.age=0;this.fit=0;this.gen=pGen||1;this.sz=1;
+  this.met=CFG.MET;
+  this.g=g?g.slice():rndG();
+  this.brain=new NN(this.g);
+  this.col=gCol(this.id);
+  this.fed=0;this.kills=0;this.children=0;
+  this.dt=dt!==null&&dt!==undefined?dt:Math.floor(Math.abs(rndG()[7]||0)*3);
+  this.leader=false;this.incity=false;
+  this.hue=gCol(this.id);
+};
+
+Org.prototype={
+  sns:function(dl){
+    this.sz=1+this.fed*0.015+this.age*0.001;
+    var bp=null,bpd=Infinity;
+    for(var i=0;i<foods.length;i++){var f=foods[i],d=Math.hypot(f.x-this.x,f.y-this.y);if(d<bpd&&d<200){bpd=d;bp={d:d/200,a:Math.atan2(f.y-this.y,f.x-this.x)-this.a};}}
+    if(bp)bp.a=Math.atan2(Math.sin(bp.a),Math.cos(bp.a));
+    var bm=null,bmd=Infinity;
+    var nn=near(this.x,this.y,180);
+    for(var i=0;i<nn.length;i++){var o=nn[i];if(o===this||!o.alive||o.sz*CFG.PR>=this.sz)continue;var d=Math.hypot(o.x-this.x,o.y-this.y);if(d<bmd){bmd=d;bm={d:d/180,a:Math.atan2(o.y-this.y,o.x-this.x)-this.a};}}
+    if(!bm)for(var i=0;i<corpses.length;i++){var c=corpses[i],d=Math.hypot(c.x-this.x,c.y-this.y);if(d<bmd){bmd=d;bm={d:d/180,a:Math.atan2(c.y-this.y,c.x-this.x)-this.a};}}
+    if(bm)bm.a=Math.atan2(Math.sin(bm.a),Math.cos(bm.a));
+    var bo=null,bod=Infinity;
+    for(var i=0;i<nn.length;i++){var o=nn[i];if(o===this||!o.alive)continue;var d=Math.hypot(o.x-this.x,o.y-this.y);if(d<bod&&d<100){bod=d;bo={d:d/100,a:Math.atan2(o.y-this.y,o.x-this.x)-this.a,ld:o.leader?1:0};}}
+    if(bo)bo.a=Math.atan2(Math.sin(bo.a),Math.cos(bo.a));
+    var bm2=null,bmd2=Infinity;
+    for(var i=0;i<msgs.length;i++){var m=msgs[i],d=Math.hypot(m.x-this.x,m.y-this.y);if(d<bmd2&&d<200){bmd2=d;bm2={d:d/200,a:Math.atan2(m.y-this.y,m.x-this.x)-this.a};}}
+    if(bm2)bm2.a=Math.atan2(Math.sin(bm2.a),Math.cos(bm2.a));
+    var cdx=cx2.x-this.x,cdy=cx2.y-this.y,cd=Math.hypot(cdx,cdy);
+    return[bp?bp.d:1,bp?bp.a:0,bm?bm.d:1,bm?bm.a:0,bo?bo.d:1,bo?bo.a:0,this.en/CFG.DIV,cd/Math.max(W,H),dl,this.sz/5];
+  },
+  up:function(dl){
+    if(!this.alive)return;
+    this.age++;this.en-=this.met*(1+this.g.length*0.001+this.sz*0.015);
+    if(this.en<=0||this.age>CFG.MAXAGE){this.alive=false;return;}
+    var inp=this.sns(dl),o=this.brain.act(inp),mf=o[0]||0,so=o[1]||0;
+    this.a+=mf*0.12;var sp=(0.3+(so+1)*0.5)/Math.max(0.4,this.sz*0.2+0.5);
+    this.vx+=Math.cos(this.a)*sp*0.04;this.vy+=Math.sin(this.a)*sp*0.04;
+    // Food-seeking instinct (gives basic survival until NN evolves)
+    for(var fi=0;fi<foods.length;fi++){var ff=foods[fi];var fd=Math.hypot(ff.x-this.x,ff.y-this.y);if(fd<200&&fd>1){var fw=1-fd/200;this.vx+=(ff.x-this.x)/fd*fw*0.04;this.vy+=(ff.y-this.y)/fd*fw*0.04;}}
+    // Danger avoidance (flee from nearby predators)
+    for(var di=0;di<orgs.length;di++){var dp=orgs[di];if(dp===this||!dp.alive||dp.dt!==1)continue;var dd=Math.hypot(dp.x-this.x,dp.y-this.y);if(dd<120&&dd>1){var dw=1-dd/120;this.vx-=(dp.x-this.x)/dd*dw*0.06;this.vy-=(dp.y-this.y)/dd*dw*0.06;}}
+    var gx=cx2.x-this.x,gy=cx2.y-this.y,gd=Math.hypot(gx,gy)+60;
+    this.vx+=gx/gd*0.025*CFG.grav;this.vy+=gy/gd*0.025*CFG.grav;
+    var nn=near(this.x,this.y,80);
+    for(var i=0;i<nn.length;i++){var o2=nn[i];if(o2===this||!o2.alive)continue;var d=Math.hypot(o2.x-this.x,o2.y-this.y);if(d<12&&d>0){this.vx-=(o2.x-this.x)/d*0.04;this.vy-=(o2.y-this.y)/d*0.04;}}
+    for(var i=0;i<nn.length;i++){var o2=nn[i];if(o2===this||!o2.alive||o2.dt!==1)continue;if(o2.sz*0.8>this.sz){var d=Math.hypot(o2.x-this.x,o2.y-this.y);if(d<80){this.vx-=(o2.x-this.x)/d*0.05;this.vy-=(o2.y-this.y)/d*0.05;}}}
+    this.vx+=(Math.random()-0.5)*0.03;this.vy+=(Math.random()-0.5)*0.03;this.vx*=0.92;this.vy*=0.92;
+    this.x+=this.vx;this.y+=this.vy;
+    if(this.x<0||this.x>W||this.y<0||this.y>H){this.en-=1;this.x=Math.max(2,Math.min(W-2,this.x));this.y=Math.max(2,Math.min(H-2,this.y));}
+    this.incity=Math.hypot(this.x-cx2.x,this.y-cx2.y)<80;
+    this.leader=this.en>120&&this.fit>30;
+    // Eat plants
+    if(this.dt!==1)for(var i=foods.length-1;i>=0;i--){var f=foods[i];if(Math.hypot(f.x-this.x,f.y-this.y)<this.r+this.sz*1.5){this.en=Math.min(CFG.DIV*1.5,this.en+CFG.PE);this.fit+=CFG.PE;this.fed++;foods.splice(i,1);break;}}
+    // Hunt
+    if(this.dt!==0)for(var i=orgs.length-1;i>=0;i--){var prey=orgs[i];if(prey===this||!prey.alive||prey.sz*CFG.PR>=this.sz)continue;if(Math.hypot(prey.x-this.x,prey.y-this.y)<this.r+prey.r+this.sz*2+prey.sz*2){prey.alive=false;this.en=Math.min(CFG.DIV*1.5,this.en+CFG.ME);this.fit+=CFG.ME;this.fed++;this.kills++;corpses.push({x:prey.x,y:prey.y,en:CFG.ME*0.5,age:0});if(this.kills%3===0)addLog('🥩 #'+this.id+'捕食 #'+prey.id);break;}}
+    // Corpses
+    for(var i=corpses.length-1;i>=0;i--){var c=corpses[i];if(Math.hypot(c.x-this.x,c.y-this.y)<this.r+this.sz*1.5){this.en=Math.min(CFG.DIV*1.2,this.en+c.en*0.5);this.fit+=5;corpses.splice(i,1);break;}}
+    // Messages
+    if(Math.random()<0.005){if(this.en<15)bcast(this,'⚠');else if(this.leader)bcast(this,'👑');else if(Math.random()<0.3)bcast(this,'🌿');}
+    // Reproduce
+    if(this.en>=CFG.DIV&&orgs.length<CFG.POP)this.rep();
+  },
+  rep:function(){
+    var cg=this.mut(this.g.slice());var ang=Math.random()*Math.PI*2;
+    var c=new Org(this.x+Math.cos(ang)*(6+this.sz),this.y+Math.sin(ang)*(6+this.sz),cg,this.gen+1,this.dt);
+    c.en=this.en*0.3;this.en*=0.6;c.fit=this.fit*0.1;this.children++;orgs.push(c);borns++;
+    if(c.gen>gen){gen=c.gen;$('vGen').textContent=gen;}
+    if(c.fit>bfit){bfit=c.fit;$('vBest').textContent=Math.round(bfit);}
+  },
+  mut:function(g){
+    var rate=CFG.mut;
+    for(var i=0;i<g.length;i++){if(Math.random()<rate){g[i]+=(Math.random()*2-1)*0.5;if(i===0||i===1)g[i]=Math.max(1,Math.floor(g[i]+0.5));}}
+    if(Math.random()<rate*0.2&&g.length>10){
+      var ci=4+Math.floor(g[0]*3+Math.random()*(g[1]-1));
+      if(ci<g.length-5&&ci>4){var f=g[ci],t=g[ci+1];if(f!==undefined&&t!==undefined){var nid=300+Math.floor(Math.random()*1000),ii=4+Math.floor(g[0]*3);g.splice(ii,0,nid,1,Math.random()*0.2-0.1);g[0]++;g[ci+2]*=0.5;g.push(f,nid,Math.random()*2-1,1);g[1]++;}}
+    }
+    if(Math.random()<rate*0.1&&g[1]>4){g[1]--;var st=4+Math.floor(g[0]*3);if(st<g.length-1)g.splice(st+Math.floor(Math.random()*Math.floor(g[1]))*4,4);}
+    if(Math.random()<rate*0.03)this.dt=(this.dt+Math.floor(Math.random()*3-1)+3)%3;
+    return g;
+  }
+};
+
+// ─── Species ───
+function detSp(){
+  if(orgs.length===0)return;
+  var g={};
+  for(var i=0;i<orgs.length;i++){var o=orgs[i];if(!o.alive)continue;var k=Math.round(o.g.length/5)*5+'-'+o.dt;if(!g[k])g[k]={o:[],dt:o.dt};g[k].o.push(o);}
+  var el=$('slist');el.innerHTML='';
+  var sorted=[];for(var k in g)sorted.push([k,g[k]]);sorted.sort(function(a,b){return b[1].o.length-a[1].o.length;});
+  spn=sorted.length;$('vSp').textContent=spn;
+  for(var si=0;si<Math.min(5,sorted.length);si++){
+    var data=sorted[si][1],o2=data.o;
+    var af=0,ag=0;for(var i=0;i<o2.length;i++){af+=o2[i].fit;ag+=o2[i].gen;}
+    af/=o2.length;ag/=o2.length;
+    var cp=0;for(var i=0;i<o2.length;i++)if(o2[i].incity)cp++;cp=Math.round(cp/o2.length*100);
+    var tag=['🌿','🥩','🍖'][data.dt]||'❓';
+    el.innerHTML+='<div style="color:hsl('+(gCol(o2[0].id))+',70%,55%)">▸ '+tag+' '+o2.length+'只 G'+Math.round(ag)+' '+Math.round(af)+'分 🏙'+cp+'%</div>';
+  }
+  if(sorted.length>5)el.innerHTML+='<div style="color:#6b7280">+'+(sorted.length-5)+'</div>';
+  var h=0,c=0,om=0;for(var i=0;i<orgs.length;i++){if(!orgs[i].alive)continue;if(orgs[i].dt===0)h++;else if(orgs[i].dt===1)c++;else if(orgs[i].dt===2)om++;}
+  $('dHerb').textContent=h;$('dCarn').textContent=c;$('dOmni').textContent=om;
+}
+
+// ─── Day ───
+function upDay(){dayT+=0.3*CFG.speed;if(dayT>600)dayT-=600;cDay=dayT<360;}
+function dlF(){var p=dayT/600;return p<0.6?1:Math.max(0.15,1-(p-0.6)/0.4);}
+
+// ─── Main update ───
+function update(){
+  upDay();var dl=dlF();
+  $('vDay').textContent=cDay?'☀':'🌙';
+  growF();reGrid();
+  for(var i=0;i<orgs.length;i++){var o=orgs[i];if(o.alive){var t=getT(o.x,o.y);if(t===3)o.en-=0.3;o.up(dl);}}
+  for(var i=corpses.length-1;i>=0;i--){corpses[i].age++;if(corpses[i].age>200)corpses.splice(i,1);}
+  upMsg();
+  var alive=[];for(var i=0;i<orgs.length;i++)if(orgs[i].alive)alive.push(orgs[i]);orgs=alive;
+  if(orgs.length>3){var ax=0,ay=0;for(var i=0;i<orgs.length;i++){ax+=orgs[i].x;ay+=orgs[i].y;}cx2.x+=((ax/orgs.length)-cx2.x)*0.0008;cx2.y+=((ay/orgs.length)-cx2.y)*0.0008;}
+  if(fi%20===0)detSp();
+  if(fi%100===0){
+    var cp=0;for(var i=0;i<orgs.length;i++)if(orgs[i].incity)cp++;
+    if(cp>=5&&!mile.c5){mile.c5=1;showM('🏘 定居点','生物聚集在市中心');}
+    if(cp>=20&&!mile.c20){mile.c20=1;showM('🏙 城市诞生','20个生物聚居');}
+    if(cp>=50&&!mile.c50){mile.c50=1;showM('🏛 大都会','50个生物聚居');}
+    var carn=0;for(var i=0;i<orgs.length;i++)if(orgs[i].dt===1)carn++;
+    if(carn>=3&&!mile.pred){mile.pred=1;showM('🥩 捕食者','食物链形成');}
+    if(spn>=5&&!mile.sp5){mile.sp5=1;showM('🌍 物种大爆发','5个物种共存');}
+    if(borns>=100&&!mile.b100){mile.b100=1;showM('🌱 世代更迭','100次出生');}
+  }
+  var cp=0;for(var i=0;i<orgs.length;i++)if(orgs[i].incity)cp++;
+  $('vPop').textContent=orgs.length;$('vCity').textContent=cp;
+  var ml=0;for(var i=0;i<orgs.length;i++)if(orgs[i].g.length>ml)ml=orgs[i].g.length;
+  $('vGenome').textContent=ml;$('vSpeed').textContent=CFG.speed+'x';
+  if(orgs.length===0&&fi>100){
+    addLog('⚠ 灭绝！重新播种');
+    for(var i=0;i<12;i++)orgs.push(new Org(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3)));
+    gen=1;
+  }
+  fi++;
+}
+
+// ─── Render ───
+function draw(){
+  cx.clearRect(0,0,W,H);
+  if(tcan)cx.drawImage(tcan,0,0);
+  if(!cDay){var nd=1-dlF();cx.fillStyle='rgba(5,15,30,'+(nd*0.4)+')';cx.fillRect(0,0,W,H);}
+  var grd=cx.createRadialGradient(cx2.x,cx2.y,0,cx2.x,cx2.y,120);
+  grd.addColorStop(0,'rgba(77,171,247,'+(0.05*dlF())+')');grd.addColorStop(1,'transparent');
+  cx.fillStyle=grd;cx.beginPath();cx.arc(cx2.x,cx2.y,120,0,Math.PI*2);cx.fill();
+  cx.fillStyle='rgba(77,171,247,0.2)';cx.fillRect(cx2.x-4,cx2.y-1,8,2);cx.fillRect(cx2.x-1,cx2.y-4,2,8);
+  cx.fillStyle='rgba(16,185,129,'+(0.1+dlF()*0.08)+')';
+  for(var i=0;i<foods.length;i++){cx.beginPath();cx.arc(foods[i].x,foods[i].y,2,0,Math.PI*2);cx.fill();}
+  for(var i=0;i<corpses.length;i++){cx.fillStyle='rgba(140,100,80,0.3)';cx.beginPath();cx.arc(corpses[i].x,corpses[i].y,2.5,0,Math.PI*2);cx.fill();}
+  for(var i=0;i<msgs.length;i++){var m=msgs[i];cx.fillStyle='rgba(255,255,255,'+Math.min(1,m.l/40)+')';cx.font='7px sans-serif';cx.textAlign='center';cx.fillText(m.t,m.x,m.y);}
+  for(var i=0;i<orgs.length;i++){
+    var o=orgs[i];if(!o.alive)continue;
+    cx.save();cx.translate(o.x,o.y);cx.rotate(o.a);
+    var s=o.r+o.sz;
+    if(o.leader){cx.fillStyle='rgba(255,212,59,0.1)';cx.beginPath();cx.arc(0,0,s*4,0,Math.PI*2);cx.fill();cx.fillStyle='#ffd43b';cx.beginPath();cx.arc(0,0,s*1.2,0,Math.PI*2);cx.fill();}
+    cx.fillStyle=dCol(o.dt);
+    cx.beginPath();cx.moveTo(s*2.5,0);cx.lineTo(-s,-s*0.8);cx.lineTo(-s*0.3,0);cx.lineTo(-s,s*0.8);cx.closePath();cx.fill();
+    cx.strokeStyle='rgba(255,255,255,0.1)';cx.lineWidth=0.5;cx.stroke();
+    var ew=s*3,eh=1.2;cx.fillStyle='rgba(0,0,0,0.3)';cx.fillRect(-ew/2,-s-3,ew,eh);
+    cx.fillStyle=o.en/CFG.DIV>0.4?'#10b981':'#ef4444';
+    cx.fillRect(-ew/2,-s-3,ew*Math.min(1,o.en/CFG.DIV),eh);
+    cx.fillStyle='rgba(255,255,255,0.12)';cx.font='4px monospace';cx.textAlign='center';cx.fillText(o.gen,0,s+5);
+    cx.restore();
+  }
+}
+
+// ─── Controls ───
+function resetSim(){
+  orgs=[];foods=[];corpses=[];msgs=[];nid=1;
+  gen=1;bfit=0;borns=0;spn=0;fi=0;dayT=0;mile={};ccol={};
+  cx2={x:W/2,y:H/2};
+  $('vPop').textContent='0';$('vCity').textContent='0';$('vGen').textContent='1';
+  $('vBest').textContent='0';$('vGenome').textContent='0';$('vSp').textContent='0';
+  $('slist').innerHTML='<div style="color:#6b7280">等待...</div>';$('log').innerHTML='<div style="color:#6b7280">启动中...</div>';
+  buildTerrain();spawnF(CFG.food);
+  for(var i=0;i<15;i++)orgs.push(new Org(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3)));
+  addLog('🔄 重置完成');
+}
+function injectLife(){for(var i=0;i<5;i++)orgs.push(new Org(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3)));addLog('🌱 注入5生物');}
+function togglePause(){paused=!paused;$('btnPause').textContent=paused?'▶':'⏸';}
+
+$('cTemp').oninput=function(){CFG.temp=parseInt(this.value);$('dTemp').textContent=CFG.temp;};
+$('cPlant').oninput=function(){CFG.food=parseInt(this.value);$('dPlant').textContent=CFG.food;};
+$('cMut').oninput=function(){CFG.mut=parseInt(this.value)/100;$('dMut').textContent=parseInt(this.value)+'%';};
+$('cGrav').oninput=function(){CFG.grav=parseInt(this.value)/100;$('dGrav').textContent=parseInt(this.value)+'%';};
+$('cSpeed').oninput=function(){CFG.speed=parseInt(this.value);$('dSpeed').textContent=CFG.speed+'x';$('vSpeed').textContent=CFG.speed+'x';};
+cv.addEventListener('click',function(e){var r=cv.getBoundingClientRect();spawnF(3);addLog('🌿 种植物');});
+
+// ─── Start ───
+buildTerrain();spawnF(CFG.food);
+for(var i=0;i<15;i++)orgs.push(new Org(100+Math.random()*(W-200),100+Math.random()*(H-200),null,1,Math.floor(Math.random()*3)));
+addLog('🌍 启动 15生物');
+
+function loop(){if(!paused)for(var s=0;s<CFG.speed;s++)update();draw();requestAnimationFrame(loop);}
+loop();
+addLog('✅ 正常运行');
+}catch(e){document.body.innerHTML='<pre style="color:red;padding:20px;font-size:14px">启动错误: '+e.message+'<br>'+e.stack+'</pre>';}
+</script>
+</body>
+</html>

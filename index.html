@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI 游戏乐园</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: linear-gradient(135deg, #060a12 0%, #0d1520 50%, #060a12 100%);
+  color: #e5e7eb;
+  font-family: "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+.header {
+  text-align: center;
+  padding: 40px 0 50px;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10b981, transparent);
+}
+.header h1 {
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981, #06b6d4, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+}
+.header p {
+  margin-top: 16px;
+  font-size: 16px;
+  color: #9ca3af;
+  letter-spacing: 2px;
+}
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  padding: 20px 0;
+}
+.game-card {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  padding: 28px 24px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.game-card:hover {
+  border-color: #10b981;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.15);
+}
+.game-card:hover::before { transform: scaleX(1); }
+.game-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+}
+.game-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #10b981;
+  margin-bottom: 10px;
+}
+.game-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.7;
+  margin-bottom: 20px;
+  min-height: 60px;
+}
+.game-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.game-link:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+.game-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 20px;
+  font-size: 11px;
+  color: #10b981;
+  margin-bottom: 12px;
+}
+.footer {
+  text-align: center;
+  padding: 40px 0 20px;
+  color: #4b5563;
+  font-size: 12px;
+  border-top: 1px solid #1e293b;
+  margin-top: 40px;
+}
+.count-badge {
+  display: inline-block;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 20px;
+  padding: 4px 16px;
+  font-size: 14px;
+  color: #10b981;
+  margin-top: 12px;
+}
+@media (max-width: 720px) {
+  body { padding: 20px 12px; }
+  .header h1 { font-size: 28px; }
+  .games-grid { grid-template-columns: 1fr; gap: 16px; }
+  .game-card { padding: 20px 16px; }
+  .game-desc { min-height: auto; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>AI 游戏乐园</h1>
+    <p>人工智能驱动的交互式模拟与游戏体验</p>
+    <div class="count-badge">共 8 款 AI 游戏</div>
+  </div>
+
+  <div class="games-grid">
+    <div class="game-card">
+      <span class="game-icon">🐍</span>
+      <span class="game-tag">寻路算法</span>
+      <div class="game-title">AI 贪吃蛇</div>
+      <div class="game-desc">基于 BFS 寻路、控尾防御和终局 MATRIX 折叠算法的智能贪吃蛇，在 20×20 棋盘上冲击 400 分满分，支持五种速度切换。</div>
+      <a class="game-link" href="AI贪吃蛇.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">✈️</span>
+      <span class="game-tag">强化学习</span>
+      <div class="game-title">AI 躲避子弹</div>
+      <div class="game-desc">AI 通过 729 种状态空间的强化学习学会预判子弹轨迹并灵活躲避，支持预训练模型、子弹密度和速度调节，手机与电脑端均适配。</div>
+      <a class="game-link" href="AI躲避子弹.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">🧠</span>
+      <span class="game-tag">Q-Learning</span>
+      <div class="game-title">AI 挡球</div>
+      <div class="game-desc">两个 Q-learning AI 在 330 种状态空间中学习预判球轨迹并拦截，AI 速度高于球速确保物理可行性，支持预训练和存档功能。</div>
+      <a class="game-link" href="AI挡球.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">⚔</span>
+      <span class="game-tag">文明模拟</span>
+      <div class="game-title">部落文明</div>
+      <div class="game-desc">模拟部落文明的进化生态，生物通过神经网络自主决策，采集资源、繁衍后代、结盟或发动战争，支持实时调节环境参数和观察部落兴衰。</div>
+      <a class="game-link" href="部落文明.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">🌍</span>
+      <span class="game-tag">生态进化</span>
+      <div class="game-title">数字文明 · 进化生态模拟</div>
+      <div class="game-desc">数字文明进化生态模拟，生物通过神经网络进化，有植食 / 肉食 / 杂食之分，形成复杂食物链和城市聚落，支持昼夜循环和环境调节。</div>
+      <a class="game-link" href="数字文明进化生态模拟.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">🧬</span>
+      <span class="game-tag">遗传算法</span>
+      <div class="game-title">神经网络进化模拟器</div>
+      <div class="game-desc">生物在二维世界中通过神经网络进化，学会寻找食物、避开毒药和障碍物，支持世代遗传、蜂群行为和点击交互操控。</div>
+      <a class="game-link" href="神经网络进化模拟器.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">⚛</span>
+      <span class="game-tag">化学模拟</span>
+      <div class="game-title">真实化学进化模拟器</div>
+      <div class="game-desc">基于真实元素周期表的化学进化模拟，原子自发成键形成分子，逐步从无机物进化到有机物、生物分子乃至原细胞的涌现。</div>
+      <a class="game-link" href="化学进化模拟器.html">进入游戏 →</a>
+    </div>
+
+    <div class="game-card">
+      <span class="game-icon">🔮</span>
+      <span class="game-tag">物理模拟</span>
+      <div class="game-title">轨道弹球</div>
+      <div class="game-desc">基于真实二维圆周曲面碰撞物理的乒乓游戏，两个 AI（蓝 / 红）通过预测落点与擦边偏移策略对战，支持 1x~15x 时空流速调节。</div>
+      <a class="game-link" href="轨道弹球.html">进入游戏 →</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    AI 游戏乐园 · 人工智能驱动的交互式模拟合集
+  </div>
+</div>
+</body>
+</html>
