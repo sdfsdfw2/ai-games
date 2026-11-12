@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NES 双卡带合集 · 贪吃蛇 / 音乐盒</title>
+<style>
+:root{
+  --bg:#0a0c11; --panel:#12161f; --line:#252c3a; --fg:#e8ecf4;
+  --muted:#8b94a7; --green:#56d660; --red:#e23e3e; --accent:#f5c451;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+body{min-height:100vh;background:
+  radial-gradient(900px 500px at 50% -10%,#16202b 0%,transparent 70%),var(--bg);
+  padding:22px 16px 40px}
+.wrap{max-width:1040px;margin:0 auto}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:22px;letter-spacing:3px;margin:0;color:var(--green);
+  text-shadow:0 0 18px rgba(86,214,96,.35)}
+.sub{color:var(--muted);font-size:12px;letter-spacing:1px}
+.tag{font-size:10px;color:var(--muted);border:1px solid var(--line);
+  padding:3px 7px;border-radius:3px;letter-spacing:1px}
+.games{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.gbtn{flex:1;min-width:200px;text-align:left;background:var(--panel);
+  border:1px solid var(--line);border-radius:6px;padding:12px 14px;
+  color:var(--fg);cursor:pointer;font:inherit;transition:.15s}
+.gbtn:hover{border-color:var(--green)}
+.gbtn.on{border-color:var(--green);background:#16251c;
+  box-shadow:0 0 18px rgba(86,214,96,.12)}
+.gbtn b{display:block;font-size:14px;letter-spacing:2px}
+.gbtn small{display:block;color:var(--muted);font-size:10px;margin-top:5px;letter-spacing:1px}
+.gbtn.on b{color:var(--green)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 288px;gap:20px;align-items:start}
+@media(max-width:780px){
+  .layout{display:flex;flex-direction:column;gap:12px}
+  .layout > div{min-width:0;max-width:100%}
+  .layout > div:last-child{display:flex;flex-direction:column}
+  .panel-pad{order:-1}
+  .screen-bar > div{justify-content:flex-start}
+  /* 窄屏压缩纵向占用，让虚拟手柄尽量落在首屏 */
+  .tag{display:none}
+  .games{gap:8px;margin-bottom:12px}
+  .gbtn{min-width:0;flex:1 1 calc(50% - 4px);padding:9px 10px}
+  .gbtn b{font-size:12px;letter-spacing:1px}
+  .gbtn small{font-size:9px;letter-spacing:0;margin-top:3px}
+  .panel-pad .hint{font-size:9px;line-height:1.4;margin:0 0 5px}
+  .dpad{grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,46px);gap:4px;margin:2px 0 6px}
+  .screen-bar{margin-top:8px}
+  .screen-bar .btn{padding:6px 8px;font-size:10px}
+}
+.screen{background:#000;border:4px solid var(--line);border-radius:6px;
+  box-shadow:0 0 0 1px #000,0 18px 50px rgba(0,0,0,.7),0 0 60px rgba(86,214,96,.07);
+  padding:8px;position:relative}
+canvas{display:block;width:100%;max-width:100%;height:auto;image-rendering:pixelated;
+  image-rendering:crisp-edges;background:#000}
+.screen-bar{display:flex;justify-content:space-between;align-items:center;
+  gap:8px;margin-top:10px;flex-wrap:wrap}
+.screen-bar > div{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;min-width:0}
+.btn{background:#1b2230;color:var(--fg);border:1px solid var(--line);
+  border-radius:4px;padding:7px 11px;font:inherit;font-size:11px;cursor:pointer;
+  letter-spacing:1px;transition:.15s}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.on{border-color:var(--green);color:var(--green)}
+.btn.go{border-color:#3d6b45;color:var(--green);font-weight:700}
+.state{font-size:11px;color:var(--accent);letter-spacing:1px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  padding:14px;margin-bottom:14px}
+.panel h2{font-size:11px;letter-spacing:2px;color:var(--muted);
+  margin:0 0 10px;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:11px}
+td{padding:4px 0;color:var(--muted)}
+td:first-child{color:var(--fg);white-space:nowrap;padding-right:10px}
+kbd{background:#202838;border:1px solid #333d52;border-bottom-width:2px;
+  border-radius:3px;padding:1px 5px;font:inherit;font-size:10px;color:var(--fg)}
+.dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,44px);
+  gap:5px;justify-content:center;margin:4px 0 10px}
+.dpad button{background:#1b2230;border:1px solid var(--line);color:var(--fg);
+  border-radius:5px;font-size:17px;cursor:pointer;touch-action:none;user-select:none}
+.dpad button:active,.dpad button.hold{background:#2a3b2f;border-color:var(--green);color:var(--green)}
+/* 方向箭头用纯几何三角形，避免等宽字体把 ↑↓←→ 渲染成细线 */
+.dpad button[data-b]{position:relative}
+.dpad button[data-b]::after{content:'';position:absolute;left:50%;top:50%;
+  width:14px;height:14px;background:currentColor;transform:translate(-50%,-50%)}
+.dpad button.u::after{clip-path:polygon(50% 0%,100% 100%,0% 100%)}
+.dpad button.d::after{clip-path:polygon(0% 0%,100% 0%,50% 100%)}
+.dpad button.l::after{clip-path:polygon(100% 0%,0% 50%,100% 100%)}
+.dpad button.r::after{clip-path:polygon(0% 0%,100% 50%,0% 100%)}
+.dpad .u{grid-area:1/2}.dpad .l{grid-area:2/1}.dpad .c{grid-area:2/2;
+  background:transparent;border:none;cursor:default}.dpad .r{grid-area:2/3}
+.dpad .d{grid-area:3/2}
+.row2{display:flex;gap:6px;justify-content:center;margin-top:6px}
+.row2 button{flex:1;padding:9px 4px;font-size:10px;letter-spacing:1px}
+.row2 button[data-b="START"]{border-color:#3d6b45;color:var(--green);font-weight:700}
+.hint{text-align:center;font-size:10px;color:var(--muted);margin:0 0 10px;line-height:1.6}
+.note{font-size:10px;line-height:1.7;color:var(--muted);margin:0}
+.note b{color:var(--fg);font-weight:600}
+.err{color:var(--red);font-size:11px;margin-top:8px;display:none}
+footer{margin-top:20px;font-size:10px;color:#5f6879;line-height:1.8;
+  border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>NES 双卡带合集</h1>
+    <span class="sub">两张真正跑在 6502 上的 .nes ROM</span>
+    <span class="tag">6502 ASM</span>
+    <span class="tag">MAPPER 0 · NROM-256</span>
+    <span class="tag">NTSC 60Hz</span>
+  </header>
+
+  <div class="games" id="games"></div>
+
+  <div class="layout">
+    <div>
+      <div class="screen">
+        <canvas id="cv" width="256" height="240"></canvas>
+        <div class="screen-bar">
+          <span class="state" id="state">状态：载入中</span>
+          <div>
+            <button class="btn go" id="startBtn">开始 / START</button>
+            <button class="btn" id="pause">暂停</button>
+            <button class="btn" id="reset">重置</button>
+            <button class="btn on" id="sound">声音 开</button>
+            <button class="btn" id="full">全屏</button>
+          </div>
+        </div>
+        <div class="err" id="err"></div>
+      </div>
+    </div>
+
+    <div id="side"></div>
+  </div>
+
+  <footer>
+    NES SNAKE + NES MUSIC BOX · 纯 6502 汇编 / ca65 + ld65 / 32KB PRG-ROM + 8KB CHR-ROM / iNES mapper 0<br>
+    两枚 ROM、CHR 图块与 jsnes 模拟器全部内联在本页中，可直接离线打开；画面由 PPU nametable + CHR 逐 tile 还原。
+  </footer>
+</div>
+
+<script>__JSNES_LIB__</script>
+<script>
+(function(){
+  'use strict';
+  var GAMES = __GAMES_JSON__;
+  var C = jsnes.Controller;
+
+  function decode(b64){
+    var s = atob(b64), out = new Uint8Array(s.length), i;
+    for(i=0;i<s.length;i++) out[i] = s.charCodeAt(i);
+    return out;
+  }
+  GAMES.forEach(function(g){
+    g.chrBytes = decode(g.chr);
+    var rb = decode(g.rom), s = '', CH = 8192;
+    for(var i=0;i<rb.length;i+=CH)
+      s += String.fromCharCode.apply(null, rb.subarray(i, Math.min(i+CH, rb.length)));
+    g.romStr = s;
+  });
+
+  // ---------------- 两套右侧面板 ----------------
+  var PANELS = {
+    snake: ''
+      + '<div class="panel"><h2>键盘操作</h2><table>'
+      + '<tr><td>移动</td><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W A S D</kbd></td></tr>'
+      + '<tr><td>开始 / 暂停</td><td><kbd>Enter</kbd> 或 <kbd>空格</kbd></td></tr>'
+      + '<tr><td>回标题</td><td><kbd>Shift</kbd> / <kbd>Backspace</kbd></td></tr>'
+      + '<tr><td>本地暂停</td><td><kbd>P</kbd></td></tr></table></div>'
+      + '<div class="panel panel-pad"><h2>虚拟手柄</h2>'
+      + '<p class="hint">先点 <b style="color:var(--green)">START</b> 开局<br>方向键轻点一下即可，无需长按</p>'
+      + padHTML() + '</div>'
+      + '<div class="panel"><h2>玩法</h2><p class="note">'
+      + '按 <b>START</b> 开局，方向键控制蛇吃<b style="color:var(--red)">红色宝石</b>。'
+      + '撞墙或咬到自己即 <b>GAME OVER</b>。每吃 5 个升一级并<b>加速</b>；'
+      + '分数与最高分实时显示。游戏中按 <b>START</b> 暂停，<b>SELECT</b> 回标题。</p></div>'
+      + '<div class="panel"><h2>关于</h2><p class="note">'
+      + '真正跑在 <b>6502 模拟器</b>上的 <b>.nes ROM</b>，不是网页仿制版。'
+      + '标题画面含 2026 年自绘中文点阵与游戏说明；声音来自 APU 方波与噪声通道。</p></div>',
+    music: ''
+      + '<div class="panel"><h2>键盘操作</h2><table>'
+      + '<tr><td>上一首 / 下一首</td><td><kbd>←</kbd><kbd>→</kbd></td></tr>'
+      + '<tr><td>音量 + / -</td><td><kbd>↑</kbd><kbd>↓</kbd></td></tr>'
+      + '<tr><td>播放 / 暂停</td><td><kbd>Z</kbd> (A)</td></tr>'
+      + '<tr><td>停止</td><td><kbd>X</kbd> (B)</td></tr>'
+      + '<tr><td>随机播放</td><td><kbd>Enter</kbd> / <kbd>空格</kbd> (START)</td></tr>'
+      + '<tr><td>曲目表</td><td><kbd>Shift</kbd> (SELECT)</td></tr>'
+      + '<tr><td>本地暂停</td><td><kbd>P</kbd></td></tr></table></div>'
+      + '<div class="panel panel-pad"><h2>虚拟手柄</h2>'
+      + '<p class="hint">开机即自动播放，<b style="color:var(--green)">轻点一下</b>即可操作<br>'
+      + '首次点击页面后浏览器才允许出声</p>'
+      + padHTML() + '</div>'
+      + '<div class="panel"><h2>曲库 · 20 首</h2><p class="note">'
+      + '<b>9 首</b>公有领域古典 / 传统民谣主题的 8-bit 改编，'
+      + '<b>11 首</b>2026 年原创芯片音乐。全部由 4 声道 APU 实时合成，'
+      + '汉字曲名为本项目逐像素自绘。<b>不含</b>受版权保护的流行歌曲旋律。'
+      + '按 <b>SELECT</b> 打开两页曲目表。</p></div>'
+      + '<div class="panel"><h2>关于</h2><p class="note">'
+      + '方波 1 主旋律 / 方波 2 和声 / 三角波低音 / 噪声打击，'
+      + '由 6502 按 tick 事件流实时写 APU 寄存器。'
+      + '频谱可视化与进度条随播放更新；曲目播完自动续播。</p></div>'
+  };
+
+  function padHTML(){
+    return '<div class="dpad">'
+      + '<button class="u" data-b="UP" aria-label="上"></button>'
+      + '<button class="l" data-b="LEFT" aria-label="左"></button><button class="c"></button>'
+      + '<button class="r" data-b="RIGHT" aria-label="右"></button>'
+      + '<button class="d" data-b="DOWN" aria-label="下"></button></div>'
+      + '<div class="row2">'
+      + '<button class="btn" data-b="SELECT">SELECT</button>'
+      + '<button class="btn" data-b="START">START</button>'
+      + '<button class="btn" data-b="A">A</button>'
+      + '<button class="btn" data-b="B">B</button></div>';
+  }
+
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', {alpha:false});
+  ctx.imageSmoothingEnabled = false;
+  var image = ctx.createImageData(256, 240);
+
+  // ---------------- 音频（环形缓冲 + ScriptProcessor） ----------------
+  var audioCtx = null, proc = null, gainNode = null;
+  var q = new Float32Array(16384), qh = 0, qt = 0;
+  var soundOn = true;
+  function initAudio(){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    try{
+      audioCtx = new AC();
+      proc = audioCtx.createScriptProcessor(1024, 0, 2);
+      gainNode = audioCtx.createGain();
+      gainNode.gain.value = 1;
+      proc.onaudioprocess = function(e){
+        var L = e.outputBuffer.getChannelData(0), R = e.outputBuffer.getChannelData(1);
+        for(var i=0;i<1024;i++){
+          if(qt - qh >= 2 && soundOn){
+            L[i] = q[qh & 16383]; R[i] = q[(qh+1) & 16383]; qh += 2;
+          } else { L[i] = 0; R[i] = 0; }
+        }
+      };
+      proc.connect(gainNode); gainNode.connect(audioCtx.destination);
+      return audioCtx.sampleRate;
+    }catch(err){ return null; }
+  }
+  var rate = initAudio() || 48000;
+  function resume(){ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }
+  function onAudioSample(l, r){
+    if(!soundOn) return;
+    if(qt - qh > 8192) qh = qt - 4096;
+    q[qt++ & 16383] = l; q[qt++ & 16383] = r;
+  }
+  // 任意首次交互都尝试解锁音频（音乐盒开机即播放）
+  ['pointerdown','keydown'].forEach(function(ev){
+    window.addEventListener(ev, resume, {passive:true});
+  });
+
+  var nes = new jsnes.NES({
+    onFrame: function(){},
+    onAudioSample: onAudioSample,
+    sampleRate: rate,
+    emulateSound: true
+  });
+
+  function showErr(msg){
+    var e = document.getElementById('err');
+    e.style.display='block'; e.textContent = msg;
+  }
+  function clearErr(){
+    var e = document.getElementById('err');
+    e.style.display='none'; e.textContent = '';
+  }
+
+  // ---------------- 从 PPU nametable + 当前 ROM 的 CHR 绘制 ----------------
+  var PAL = {0x0F:[16,16,20], 0x30:[238,238,238], 0x2A:[86,214,96], 0x16:[226,62,62]};
+  function col(h){ return PAL[h] || [16,16,20]; }
+  var chr = null;                 // 当前程序的 CHR-ROM
+  function render(){
+    if(!chr) return;
+    var vm = nes.ppu.vramMem;
+    var p0 = [col(vm[0x3F00]), col(vm[0x3F01]), col(vm[0x3F02]), col(vm[0x3F03])];
+    var d = image.data;
+    for(var ty=0; ty<30; ty++){
+      for(var tx=0; tx<32; tx++){
+        var tile = vm[0x2000 + ty*32 + tx];
+        var base = tile*16;
+        for(var y=0; y<8; y++){
+          var b0 = chr[base+y], b1 = chr[base+8+y];
+          var o = ((ty*8+y)*256 + tx*8)*4;
+          for(var x=0; x<8; x++){
+            var bit = 7-x;
+            var v = ((b0>>bit)&1) | (((b1>>bit)&1)<<1);
+            var c = p0[v];
+            d[o++]=c[0]; d[o++]=c[1]; d[o++]=c[2]; d[o++]=255;
+          }
+        }
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  // ---------------- 输入：脉冲锁存 ----------------
+  // ROM 每帧只读一次 $4016。按下与松开之间若没跨过一帧，按键会被吞掉。
+  // 因此每次按下至少保持 HOLD_FRAMES 帧，连续点击之间强制插入一帧松开。
+  var KEY = {
+    ArrowUp:'UP', KeyW:'UP', ArrowDown:'DOWN', KeyS:'DOWN',
+    ArrowLeft:'LEFT', KeyA:'LEFT', ArrowRight:'RIGHT', KeyD:'RIGHT',
+    Enter:'START', Space:'START', ShiftLeft:'SELECT', ShiftRight:'SELECT',
+    Backspace:'SELECT', KeyZ:'A', KeyX:'B'
+  };
+  var HOLD_FRAMES = 4, HELD_TIMEOUT = 180;
+  var held = {}, active = {}, repress = {}, ptrOwner = {};
+  var localPause = false;
+
+  function btn(name){ return C['BUTTON_'+name]; }
+  function pressNow(name){
+    nes.buttonDown(1, btn(name));
+    active[name] = HOLD_FRAMES;
+    delete repress[name];
+  }
+  function down(name){
+    held[name] = HELD_TIMEOUT;
+    if(active[name] > 0){
+      nes.buttonUp(1, btn(name));
+      active[name] = 0;
+      repress[name] = HOLD_FRAMES;
+    } else {
+      pressNow(name);
+    }
+    resume();
+  }
+  function up(name){ held[name] = 0; }
+  function syncInput(){
+    var n;
+    for(n in repress) pressNow(n);
+    for(n in active){
+      if(active[n] <= 0) continue;
+      if(held[n] > 0){ held[n]--; continue; }
+      active[n]--;
+      if(active[n] === 0) nes.buttonUp(1, btn(n));
+    }
+  }
+  function releaseAll(){
+    var n;
+    for(n in held) held[n] = 0;
+    for(n in repress) delete repress[n];
+    for(n in ptrOwner) delete ptrOwner[n];
+    for(n in active){
+      if(active[n] > 0){ nes.buttonUp(1, btn(n)); active[n] = 0; }
+    }
+    document.querySelectorAll('[data-b]').forEach(function(el){ el.classList.remove('hold'); });
+  }
+  function releasePointer(e){
+    var n = ptrOwner[e.pointerId];
+    if(n){ up(n); delete ptrOwner[e.pointerId]; }
+  }
+  window.addEventListener('keydown', function(e){
+    if(e.repeat) return;
+    if(e.code === 'KeyP'){ togglePause(); e.preventDefault(); return; }
+    var b = KEY[e.code];
+    if(b){ down(b); e.preventDefault(); }
+    else resume();
+  });
+  window.addEventListener('keyup', function(e){
+    var b = KEY[e.code];
+    if(b){ up(b); e.preventDefault(); }
+  });
+  window.addEventListener('blur', releaseAll);
+  window.addEventListener('pointerup', releasePointer);
+  window.addEventListener('pointercancel', releasePointer);
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) releaseAll();
+  });
+  function bindPad(){
+    document.querySelectorAll('#side [data-b]').forEach(function(el){
+      var name = el.getAttribute('data-b');
+      function release(e){
+        el.classList.remove('hold'); up(name);
+        if(e && e.pointerId !== undefined) delete ptrOwner[e.pointerId];
+      }
+      el.addEventListener('pointerdown', function(e){
+        el.classList.add('hold');
+        ptrOwner[e.pointerId] = name;
+        try{ el.setPointerCapture(e.pointerId); }catch(err){}
+        down(name);
+        e.preventDefault();
+      });
+      ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){
+        el.addEventListener(ev, release);
+      });
+    });
+  }
+
+  function setLocalPause(v){
+    localPause = v;
+    var b = document.getElementById('pause');
+    b.textContent = v ? '继续' : '暂停';
+    b.classList.toggle('on', v);
+    if(v) qh = qt;
+  }
+  function togglePause(){ setLocalPause(!localPause); }
+  document.getElementById('pause').addEventListener('click', togglePause);
+  var startBtn = document.getElementById('startBtn');
+  startBtn.addEventListener('click', function(){
+    // 音乐盒用 A 播放/暂停；贪吃蛇用 START 开局/暂停/重开
+    var k = (GAMES[current] && GAMES[current].id === 'music') ? 'A' : 'START';
+    down(k); up(k);
+  });
+  document.getElementById('reset').addEventListener('click', function(){
+    releaseAll();
+    // jsnes 2.1.0 的 reset() 会重建 CPU 却没重写 PRG-ROM，复位向量变 $0000 崩溃。
+    // 用 loadROM 重新加载当前卡带，等价于冷启动。
+    try{ nes.loadROM(GAMES[current].romStr); }
+    catch(err){ showErr('重置失败：' + err.message); return; }
+    clearErr();
+    setLocalPause(false);
+    lastStateText = '';
+    qh = qt; resume();
+  });
+  document.getElementById('sound').addEventListener('click', function(){
+    soundOn = !soundOn;
+    this.textContent = soundOn ? '声音 开' : '声音 关';
+    this.classList.toggle('on', soundOn);
+    qh = qt; resume();
+  });
+  document.getElementById('full').addEventListener('click', function(){
+    var el = document.querySelector('.screen');
+    if(el.requestFullscreen) el.requestFullscreen();
+  });
+
+  // ---------------- 程序切换 ----------------
+  var current = -1, romStr = null;
+  var gamesEl = document.getElementById('games');
+  var sideEl = document.getElementById('side');
+  GAMES.forEach(function(g, i){
+    var b = document.createElement('button');
+    b.className = 'gbtn';
+    b.innerHTML = '<b>' + g.title + '</b><small>' + g.sub + '</small>';
+    b.addEventListener('click', function(){ switchGame(i); });
+    gamesEl.appendChild(b);
+  });
+  function switchGame(i){
+    if(i === current) return;
+    releaseAll();
+    current = i;
+    var g = GAMES[i];
+    chr = g.chrBytes;
+    romStr = g.romStr;
+    try{ nes.loadROM(romStr); }
+    catch(err){ showErr('ROM 加载失败：' + err.message); return; }
+    clearErr();
+    setLocalPause(false);
+    lastStateText = '';
+    frameCount = 0;
+    qh = qt; resume();
+    Array.prototype.forEach.call(gamesEl.children, function(el, k){
+      el.classList.toggle('on', k === i);
+    });
+    sideEl.innerHTML = PANELS[g.id] || '';
+    bindPad();
+    document.title = g.title + ' · NES 双卡带合集';
+    render();
+  }
+
+  // ---------------- 主循环 ----------------
+  var SNAKE_STATES = ['标题画面 · 按 START 开局','游戏中','GAME OVER · 按 START 重开'];
+  var st = document.getElementById('state');
+  var lastStateText = '', frameCount = 0;
+  var autoStart = /[?&]start=1/.test(location.search);
+  function updateStatus(){
+    var g = GAMES[current], m = nes.cpu.mem, txt;
+    if(g.id === 'snake'){
+      var s = m[0x0004];
+      txt = '状态：' + (SNAKE_STATES[s] || '未知');
+      startBtn.textContent = s === 0 ? '开始 / START' : (s === 2 ? '重开 / START' : '暂停 / START');
+    } else {
+      var ls = m[0x0004], p = m[0x0005], idx = m[0x0006];
+      txt = '状态：' + (ls === 1 ? '曲目表' : (p ? '播放中' : '已暂停'))
+          + ' · ' + String(idx + 1).padStart(2, '0') + '/' + g.tracks + ' · VOL ' + m[0x0007];
+      startBtn.textContent = p ? '暂停 / A' : '播放 / A';
+    }
+    if(txt !== lastStateText){ lastStateText = txt; st.textContent = txt; }
+  }
+  function loop(){
+    if(localPause) return;
+    syncInput();
+    if(autoStart){
+      // 贪吃蛇自动开局；音乐盒本来就开机自动播放
+      if(GAMES[current].id === 'snake'){
+        if(frameCount === 20) down('START');
+        if(frameCount === 26){ up('START'); autoStart = false; }
+      } else {
+        autoStart = false;
+      }
+    }
+    frameCount++;
+    try{
+      nes.frame();
+      render();
+      updateStatus();
+    }catch(err){ showErr('模拟出错：' + err.message); setLocalPause(true); }
+  }
+
+  // 初始卡带：?game=music / ?game=snake，默认贪吃蛇
+  var init = 0;
+  var mch = /[?&]game=([a-z]+)/.exec(location.search);
+  if(mch){
+    for(var i=0;i<GAMES.length;i++) if(GAMES[i].id === mch[1]) init = i;
+  }
+  switchGame(init);
+  setInterval(loop, 16);
+})();
+</script>
+</body>
+</html>

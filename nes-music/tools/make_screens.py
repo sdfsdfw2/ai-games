@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""生成《NES 音乐盒》的静态 nametable 画面与 HUD 坐标常量。
+
+画面为 32x30 tile（960 字节）。共 3 张：
+  screen_player  播放界面（运行时只增量改写曲名/进度/频谱/图标/音量）
+  screen_list0/1 两页曲目表（每页 10 首，隔行排版保证 8px 字模不连笔）
+"""
+
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from songlib import SONGS, KIND_CLASSIC, KIND_FOLK, KIND_ORIGINAL
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+T, CN_MAP, SYMBOLS = {}, None, None
+with open(os.path.join(ROOT, "src", "tiles.inc"), encoding="ascii") as f:
+    for line in f:
+        m = re.match(r"^\s*(\w+)\s*=\s*\$?([0-9A-Fa-f]+)", line)
+        if m:
+            T[m.group(1)] = int(m.group(2), 16)
+        ms = re.match(r'^;\s*SYMBOLS\s*=\s*"([^"]*)"', line)
+        if ms:
+            SYMBOLS = ms.group(1)
+        mh = re.match(r"^;\s*CN_MAP_HEX\s*=\s*([0-9A-Fa-f\s]+)", line)
+        if mh:
+            CN_MAP = "".join(chr(int(h, 16)) for h in mh.group(1).split())
+assert SYMBOLS is not None and CN_MAP, "tiles.inc 缺少 SYMBOLS / CN_MAP_HEX"
+
+W, H = 32, 30
+LIST_PAGE_SIZE = 10
+KIND_NAME = {KIND_CLASSIC: "CLASSIC", KIND_FOLK: "FOLK", KIND_ORIGINAL: "ORIGINAL"}
+
+
+def new_screen():
+    return [[T["T_BLANK"]] * W for _ in range(H)]
+
+
+def char_tile(ch):
+    if ch == " ":
+        return T["T_BLANK"]
+    if "0" <= ch <= "9":
+        return T["T_DIGITS"] + ord(ch) - ord("0")
+    if "A" <= ch <= "Z":
+        return T["T_LETTERS"] + ord(ch) - ord("A")
+    if ch in SYMBOLS:
+        return T["T_SYMBOLS"] + SYMBOLS.index(ch)
+    return T["T_BLANK"]
+
+
+def text(g, x, y, s):
+    for i, ch in enumerate(s):
+        if 0 <= x + i < W:
+            g[y][x + i] = char_tile(ch)
+
+
+def cn_text(g, x, y, s):
+    """16x16 汉字：每字 2 列 x 2 行 tile。"""
+    for i, ch in enumerate(s):
+        cx = x + i * 2
+        if cx + 1 >= W:
+            break
+        if ch == " ":
+            continue
+        assert ch in CN_MAP, f"缺中文图块: {ch}"
+        base = T["T_CN"] + CN_MAP.index(ch) * 4
+        g[y][cx] = base
+        g[y][cx + 1] = base + 1
+        g[y + 1][cx] = base + 2
+        g[y + 1][cx + 1] = base + 3
+
+
+def border(g, top, bottom, left=0, right=31):
+    g[top][left] = T["T_CORNER_TL"]
+    g[top][right] = T["T_CORNER_TR"]
+    g[bottom][left] = T["T_CORNER_BL"]
+    g[bottom][right] = T["T_CORNER_BR"]
+    for x in range(left + 1, right):
+        g[top][x] = T["T_BORDER_H"]
+        g[bottom][x] = T["T_BORDER_H"]
+    for y in range(top + 1, bottom):
+        g[y][left] = T["T_BORDER_V"]
+        g[y][right] = T["T_BORDER_V"]
+
+
+def footer(g, hint):
+    text(g, max(0, (W - len(hint)) // 2), 28, hint)
+
+
+# ---------------- 播放界面 ----------------
+# 8px 字模占满行高，紧邻会连笔；所有小字行之间至少隔 2 个空行（y 差 >= 3），
+# 16px 中文大字占 2 行，与上下小字之间各留 1 个空行。
+player = new_screen()
+text(player, 1, 0, "* NES MUSIC BOX *")               # 编号 01/20 运行时画在 x=26
+cn_text(player, 11, 2, "芯片音乐盒")                  # y=2..3
+text(player, 4, 5, "2026 NEW WORK   20 TRACKS")
+border(player, 6, 20)
+# 频谱区两侧音符装饰
+for yy in (7, 9):
+    player[yy][4] = T["T_NOTE"]
+    player[yy][27] = T["T_NOTE"]
+# 静态标签（运行时改写其右侧内容）
+text(player, 2, 18, "VOL")
+text(player, 16, 18, "A PLAY  B STOP")
+text(player, 2, 22, "< > TRACK   UP/DN VOL   A PLAY")
+text(player, 2, 25, "B STOP  START RANDOM  SEL LIST")
+player[10][8] = T["T_STAR"]
+player[10][23] = T["T_STAR"]
+player[19][12] = T["T_DOT"]
+player[19][19] = T["T_DOT"]
+footer(player, "2026 CHIP MUSIC COLLECTION")
+
+# ---------------- 曲目表（两页） ----------------
+list_screens = []
+for page in range((len(SONGS) + LIST_PAGE_SIZE - 1) // LIST_PAGE_SIZE):
+    g = new_screen()
+    text(g, 1, 0, "* TRACK LIST *")
+    text(g, 20, 0, f"PAGE {page + 1}/2")
+    border(g, 2, 24)
+    for row in range(LIST_PAGE_SIZE):
+        idx = page * LIST_PAGE_SIZE + row
+        y = 4 + row * 2
+        if idx >= len(SONGS):
+            continue
+        s = SONGS[idx]
+        line = f"{idx + 1:02d}  {s['en']:<16} {KIND_NAME[s['kind']]}"
+        # 最长行 29 字符；x=2 落在 x=2..30，避开右边框所在的 x=31
+        text(g, 2, y, line)
+    # 32 列上限：以下两行均控制 x+len <= 31，避免被静默截断
+    text(g, 2, 26, "UP/DN  A/START PLAY  SEL BACK")
+    footer(g, "PUBLIC DOMAIN + 2026 ORIGINALS")
+    list_screens.append(g)
+
+# ---------------- 导出布局常量 ----------------
+consts = {
+    "SCREEN_SIZE": W * H,
+    "NAME_X": 12, "NAME_Y": 11, "NAME_MAX": 4,
+    "LABEL_X": 3, "LABEL_Y": 14, "LABEL_MAX": 14,
+    "NUM_X": 26, "NUM_Y": 0,
+    "KIND_X": 18, "KIND_Y": 14,
+    "ICON_X": 3, "ICON_Y": 16,
+    "BAR_X": 6, "BAR_Y": 16, "BAR_LEN": 20,
+    "VOL_X": 6, "VOL_Y": 18, "VOL_LEN": 8,
+    "VIZ_X": 8, "VIZ_Y": 7, "VIZ_COLS": 16, "VIZ_ROWS": 3,
+    "LIST_PAGE_SIZE": LIST_PAGE_SIZE,
+    "LIST_PAGE_COUNT": len(list_screens),
+    "LIST_ROW_Y0": 4, "LIST_ROW_STEP": 2,
+    "LIST_CURSOR_X": 1, "LIST_TEXT_X": 3,
+    "VOL_MAX": 7,
+    # 切歌时 refresh_player 一次压入约 124 个 tile，必须一次容纳得下
+    "DRAW_MAX": 160,
+}
+layout = [
+    "; Generated by tools/make_screens.py - do not edit by hand",
+    "; Player HUD / track list coordinates",
+]
+for k, v in consts.items():
+    layout.append(f"{k} = {v}")
+with open(os.path.join(ROOT, "src", "layout.inc"), "w", encoding="ascii") as f:
+    f.write("\n".join(layout) + "\n")
+
+out = [
+    "; Generated by tools/make_screens.py - do not edit by hand",
+    "; 32x30 nametable maps, 960 bytes each",
+]
+for name, g in [("screen_player", player)] + [
+    (f"screen_list{i}", s) for i, s in enumerate(list_screens)
+]:
+    out.append(f"{name}:")
+    flat = [v for row in g for v in row]
+    assert len(flat) == 960
+    assert max(flat) <= 255, f"{name} 含超出 8 位的 tile 索引"
+    for i in range(0, 960, 16):
+        out.append("    .byte " + ",".join(f"${v:02X}" for v in flat[i:i + 16]))
+    out.append("")
+with open(os.path.join(ROOT, "src", "screens.inc"), "w", encoding="ascii") as f:
+    f.write("\n".join(out) + "\n")
+
+print(f"screens.inc 生成完毕：{1 + len(list_screens)} 张画面 x 960 字节")
+print("布局：" + ", ".join(f"{k}={v}" for k, v in consts.items()
+                          if k in ("NAME_X", "BAR_X", "VIZ_X", "LIST_PAGE_SIZE")))

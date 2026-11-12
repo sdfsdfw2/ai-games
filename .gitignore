@@ -1,0 +1,21 @@
+# 平台数据（非项目文件）
+.codebuddy/
+
+# 编译中间产物（.nes / chr.bin 为成品，保留）
+build/
+*.o
+*.prg
+*.map
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 验证生成的 nametable / palette 二进制快照（PNG 截图保留）
+tools/shots/*.nt
+tools/shots/*.pal
+
+# 杂项
+.DS_Store
+*.tmp
