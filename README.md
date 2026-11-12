@@ -9,7 +9,9 @@
 
 ## 在线试玩
 
-直接打开仓库根目录的 [`index.html`](index.html)（或 `nes-snake/play.html`）——单文件、可离线、无需服务器。顶部按钮可在两个程序间随时切换，`?game=music` / `?game=snake` 可直达。
+**GitHub Pages 在线地址：<https://sdfsdfw2.github.io/ai-games/nes-dual-cart/>** —— 打开即玩，无需安装，支持手机。
+
+也可以直接打开仓库根目录的 [`index.html`](index.html)（或 `nes-snake/play.html`）——单文件、可离线、无需服务器。顶部按钮可在两个程序间随时切换，`?game=music` / `?game=snake` 可直达。
 
 ![合集页 · 贪吃蛇](nes-snake/tools/shots/arcade_01_snake_title.png)
 
