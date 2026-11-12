@@ -5,6 +5,7 @@
 ## 在线预览
 
 👉 https://sdfsdfw2.github.io/ai-games/
+🕹️ **NES 双卡带合集**（贪吃蛇 + 音乐盒）：https://sdfsdfw2.github.io/ai-games/nes-dual-cart/
 
 ## 游戏列表
 
@@ -18,6 +19,7 @@
 | 🧬 **神经网络进化模拟器** | 遗传算法 + 蜂群行为 |
 | ⚛ **真实化学进化模拟器** | 基于真实元素周期表的化学涌现 |
 | 🔮 **轨道弹球** | 二维圆周曲面碰撞物理，1x~15x 流速 |
+| 🕹️ **NES 双卡带合集** | 6502 汇编原生 .nes ROM · 2026 中文点阵标题 · 20 首 APU 芯片音乐 · [在线试玩](https://sdfsdfw2.github.io/ai-games/nes-dual-cart/) |
 
 ## 特点
 

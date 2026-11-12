@@ -1,5 +1,7 @@
 # NES Dual-Cart Collection (2026)
 
+**Online: https://sdfsdfw2.github.io/ai-games/nes-dual-cart/**
+
 Two homebrew NES ROMs written in pure 6502 assembly, playable directly in the browser.
 
 - **index.html** is fully self-contained: jsnes, both ROMs and both CHR banks are inlined.
